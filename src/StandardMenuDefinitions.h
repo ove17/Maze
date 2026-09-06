@@ -1,0 +1,85 @@
+// StandardMenuDefinitions.h
+
+#ifndef STANDARD_MENU_DEFINITIONS_H
+#define STANDARD_MENU_DEFINITIONS_H
+
+#include "Maze.h"
+
+
+static const MZ_menuStateT menuStandaardStates[1] = {
+    MZ_STATE_STD_SCROLLING,
+};
+
+static const MZ_menuStateT menuDbaseStates[2] = {
+    MZ_STATE_DBASE_SCROLLING,
+    MZ_STATE_DBASE_EDITING
+};
+
+static const MZ_menuTypeDefT MenuTypeDefs[MZ_MENU_TYPE_COUNT] = {
+    [MZ_MENU_TYPE_STANDARD] = {
+        .numStates = 1,
+        .states = menuStandaardStates,
+    },
+    [MZ_MENU_TYPE_DBASE] = {
+        .numStates = 2,
+        .states = menuDbaseStates,
+    },
+};
+
+
+//1x intern (prive) en 1x extern
+static const MZ_menuActionT menuActions[MZ_STATE_COUNT][MZ_NAV_COUNT] = {
+    [MZ_STATE_STD_SCROLLING] = {
+        [MZ_NAV_ENTER]  = MZ_ACTION_GO_TO_MENU,
+        [MZ_NAV_UP]     = MZ_ACTION_SCROLL_1_MENU_ITEM_BACK,
+        [MZ_NAV_UP10]   = MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
+        [MZ_NAV_DOWN]   = MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
+        [MZ_NAV_DOWN10] = MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
+    },
+    [MZ_STATE_DBASE_SCROLLING] = {
+        //        [MZ_NAV_ENTER]  = MZ_ACTION_GO_TO_SUBTABLE,
+        [MZ_NAV_UP]     = MZ_ACTION_SCROLL_1_MENU_ITEM_BACK,
+        [MZ_NAV_UP10]   = MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
+        [MZ_NAV_DOWN]   = MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
+        [MZ_NAV_DOWN10] = MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
+        [MZ_NAV_RIGHT]  = MZ_ACTION_ENTER_EDIT_RECORD,
+        [MZ_NAV_LEFT]   = MZ_ACTION_MANAGE_RECORDS,
+    },
+    [MZ_STATE_DBASE_EDITING] = {
+        [MZ_NAV_RIGHT]  = MZ_ACTION_GO_1_COLUMN_FORWARD,
+        [MZ_NAV_LEFT]   = MZ_ACTION_GO_1_COLUMN_BACK,
+        [MZ_NAV_END]    = MZ_ACTION_GO_10_COLUMNS_FORWARD,
+        [MZ_NAV_HOME]   = MZ_ACTION_GO_10_COLUMNS_BACK,
+        [MZ_NAV_PLUS1]      = MZ_ACTION_INCREASE_VALUE_BY_1,
+        [MZ_NAV_MINUS1]     = MZ_ACTION_DECREASE_VALUE_BY_1,
+        [MZ_NAV_PLUS10]     = MZ_ACTION_INCREASE_VALUE_BY_10,
+        [MZ_NAV_MINUS10]    = MZ_ACTION_DECREASE_VALUE_BY_10,
+    },
+    [MZ_STATE_DBASE_INSERT_RECORD] = {
+        [MZ_NAV_ENTER]      = MZ_ACTION_INSERT_RECORD,
+        [MZ_NAV_LEFT]       = MZ_ACTION_GOTO_DELETE_RECORD,
+        [MZ_NAV_RIGHT]      = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_UP]         = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_DOWN]       = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+    },
+    [MZ_STATE_DBASE_CANNOT_INSERT_RECORD] = {
+        [MZ_NAV_LEFT]       = MZ_ACTION_GOTO_DELETE_RECORD,
+        [MZ_NAV_RIGHT]      = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_UP]         = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_DOWN]       = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+    },
+    [MZ_STATE_DBASE_DELETE_RECORD] = {
+        [MZ_NAV_ENTER]      = MZ_ACTION_DELETE_RECORD,
+        [MZ_NAV_RIGHT]      = MZ_ACTION_GOTO_INSERT_RECORD,
+        [MZ_NAV_UP]         = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_DOWN]       = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+    },
+    [MZ_STATE_DBASE_CANNOT_DELETE_RECORD] = {
+        [MZ_NAV_UP]         = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_DOWN]       = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_RIGHT]      = MZ_ACTION_GOTO_INSERT_RECORD,
+    },
+};
+
+
+#endif

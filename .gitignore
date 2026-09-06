@@ -1,0 +1,7 @@
+.DS_Store
+.kateproject
+*.a
+obj/
+test/lib
+test/objs
+test/testMaze
