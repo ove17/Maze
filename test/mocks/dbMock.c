@@ -1,6 +1,7 @@
 // dbMock.c
 
 #include <stdbool.h>
+#include <stdint.h>
 
 static uint8_t NumRecords = 0;
 static uint8_t MaxNumRecords = 0xFF;
@@ -9,6 +10,7 @@ static uint32_t Value = 0;
 static uint16_t MaxValue = 0xFF;
 static uint16_t MinValue = 0;
 static uint8_t RecordThatCannotBeDeleted = 0xFF;
+static bool RecordTypeIsVariable = false;
 
 
 uint8_t DB_getNumRecords(const uint8_t tableId) {
@@ -71,6 +73,11 @@ bool DB_canRecordBeDeleted(const uint8_t tableId,
 }
 
 
+bool DB_isRecordTypeVariable(const uint8_t tableId) {
+    return RecordTypeIsVariable;
+}
+
+
 // for setting test values:
 
 
@@ -82,6 +89,7 @@ void DB_init(void) {
     MaxValue = 0xFF;
     MinValue = 0;
     RecordThatCannotBeDeleted = 0xFF;
+    RecordTypeIsVariable = false;
 }
 
 
@@ -117,3 +125,9 @@ void DB_setMinValue(const uint16_t minValue) {
 void DB_setRecordThatCannotBeDeletedTo(const uint8_t recordId) {
     RecordThatCannotBeDeleted = recordId;
 }
+
+
+void DB_setRecordTypeToVariable(void) {
+    RecordTypeIsVariable = true;
+}
+

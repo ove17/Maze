@@ -5,7 +5,7 @@
 #define DB_MOCK_H
 
 #include <stdbool.h>
-
+#include <stdint.h>
 
 // these functions exist in BDB:
 
@@ -27,6 +27,8 @@ bool DB_canRecordBeDeleted(const uint8_t tableId,
                            const uint8_t recordId);
 bool DB_deleteRecord(const uint8_t tableId,
                      const uint8_t recordId);
+bool DB_isRecordTypeVariable(const uint8_t tableId);
+
 
 // for setting test values:
 
@@ -38,5 +40,6 @@ void DB_setValue(const uint32_t value);
 void DB_setMaxValue(const uint16_t maxValue);
 void DB_setMinValue(const uint16_t minValue);
 void DB_setRecordThatCannotBeDeletedTo(const uint8_t recordId);
+void DB_setRecordTypeToVariable(void);
 
 #endif

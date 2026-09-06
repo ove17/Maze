@@ -86,6 +86,8 @@ enum {
     MZ_ACTION_DECREASE_VALUE_BY_10,
     MZ_ACTION_MANAGE_RECORDS,
     MZ_ACTION_LEAVE_MANAGE_RECORDS,
+    MZ_ACTION_GOTO_CHANGE_RECORD_TYPE,
+    MZ_ACTION_LEAVE_INSERT_RECORD,
     MZ_ACTION_GOTO_INSERT_RECORD,
     MZ_ACTION_GOTO_DELETE_RECORD,
     MZ_ACTION_INSERT_RECORD,
@@ -117,6 +119,8 @@ enum {
     MZ_STATE_STD_SCROLLING,
     MZ_STATE_DBASE_SCROLLING,
     MZ_STATE_DBASE_EDITING,
+    MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE,
+    MZ_STATE_DBASE_CHANGE_RECORD_TYPE,
     MZ_STATE_DBASE_INSERT_RECORD,
     MZ_STATE_DBASE_CANNOT_INSERT_RECORD,
     MZ_STATE_DBASE_DELETE_RECORD,
@@ -170,6 +174,7 @@ typedef struct {
                          uint8_t recordId);
     bool (*canRecordBeDeleted)(uint8_t tableId,
                                uint8_t recordId);
+    bool (*isRecordTypeVariable)(uint8_t tableId);
 } MZ_DbaseFunctionsT;
 
 

@@ -158,6 +158,17 @@ static void goToDeleteRecordState(void) {
 }
 
 
+static bool trySetMenuStateToChangeRecord() {
+    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    if (DbFuncs->isRecordTypeVariable(tableId)) {
+        MenuState = MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
 /*
  * MZ_navigateMaze(nav) executes the function AND its returnvalue
  *  contains the actionId
@@ -225,13 +236,21 @@ uint8_t MZ_navigateMaze(MZ_navT nav) {
                 return MZ_ACTION_NONE;
             }
             break;
-        case MZ_ACTION_MANAGE_RECORDS : {
-            // TODO: goes to insert or changeType
-            goToInsertRecordState();
+        case MZ_ACTION_MANAGE_RECORDS :
+            if (!trySetMenuStateToChangeRecord()) {
+                goToInsertRecordState();
+            }
             break;
-        }
         case MZ_ACTION_LEAVE_MANAGE_RECORDS :
             MenuState = MZ_STATE_DBASE_SCROLLING;
+            break;
+        case MZ_ACTION_GOTO_CHANGE_RECORD_TYPE :
+            MenuState = MZ_STATE_DBASE_CHANGE_RECORD_TYPE;
+            break;
+        case MZ_ACTION_LEAVE_INSERT_RECORD :
+            if (!trySetMenuStateToChangeRecord()) {
+                MenuState = MZ_STATE_DBASE_SCROLLING;
+            }
             break;
         case MZ_ACTION_GOTO_INSERT_RECORD :
             goToInsertRecordState();

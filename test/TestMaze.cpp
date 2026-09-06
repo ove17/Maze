@@ -297,25 +297,126 @@ static const MZ_DbaseFunctionsT DbaseFunctions = {
     .canRecordBeAdded = DB_canRecordBeAdded,
     .deleteRecord = DB_deleteRecord,
     .canRecordBeDeleted = DB_canRecordBeDeleted,
+    .isRecordTypeVariable = DB_isRecordTypeVariable,
 };
 
 
 /* TODO:
  *
- * create git repo
- *
- * dbaseMenu: MZ_STATE_DBASE_SCROLLING
- *  implement changeRecordType
+ * implement changeRecordType
+ *      implement ENTER (extra step) to change recordType?
+ *          JA, want geen SHIFT-ENTER meer!
+ *      insertRecord -> must go to changeType if available
  *
  * editRecord :
+ *  columns are offset by 1 in varRecType tables (?)
  *  all actions without result must return MZ_ACTION_NONE
- *
  * QUESTION:
  *  Should all actions without result return MZ_ACTION_NONE??
  *
  * General:
  *  - implement importing custom MenuDefinitions/Actions/States
+ *
+ * Update comments in Maze.h
+ * Improve README.md
  */
+
+
+TEST_GROUP(DbaseGotoChangeRecordTypeState) {
+    void setup() {
+        DB_init();
+        MZ_init(DbaseMenuDef, &DbaseFunctions);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        DB_setRecordTypeToVariable();
+        MZ_navigateMaze(MZ_NAV_LEFT);
+    }
+
+    void teardown() {
+    }
+};
+
+
+// MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE :
+
+
+TEST(DbaseGotoChangeRecordTypeState,
+     RIGHT_goesToDbaseScrollState) {
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
+}
+
+
+TEST(DbaseGotoChangeRecordTypeState,
+     LEFT_goesToInsertRecordState) {
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(MZ_STATE_DBASE_INSERT_RECORD, MZ_getMenuState());
+}
+
+
+TEST(DbaseGotoChangeRecordTypeState,
+     LEFT_goesToCannotInsertRecordState_ifMaxRecordsIsReached) {
+    DB_setNumRecords(8);
+    DB_setMaxNumRecords(8);
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_INSERT_RECORD, MZ_getMenuState());
+}
+
+
+TEST(DbaseGotoChangeRecordTypeState,
+     ENTER_goesToDbaseChangeRecordTypeState) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
+}
+
+
+// end MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE :
+
+
+TEST_GROUP(DbaseChangeRecordTypeState) {
+    void setup() {
+        DB_init();
+        MZ_init(DbaseMenuDef, &DbaseFunctions);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        DB_setRecordTypeToVariable();
+        MZ_navigateMaze(MZ_NAV_LEFT);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+    }
+
+    void teardown() {
+    }
+};
+
+
+// MZ_STATE_DBASE_CHANGE_RECORD_TYPE :
+
+
+TEST(DbaseChangeRecordTypeState,
+     RIGHT_goesToDbaseScrollState) {
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
+}
+
+
+TEST(DbaseChangeRecordTypeState,
+     LEFT_goesToInsertRecordState) {
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(MZ_STATE_DBASE_INSERT_RECORD, MZ_getMenuState());
+}
+
+
+TEST(DbaseChangeRecordTypeState,
+     LEFT_goesToCannotInsertRecordState_ifMaxRecordsIsReached) {
+    DB_setNumRecords(8);
+    DB_setMaxNumRecords(8);
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_INSERT_RECORD, MZ_getMenuState());
+}
+
+
+//TODO: plus/minus 1/10
+
+
+// end MZ_STATE_DBASE_CHANGE_RECORD_TYPE :
 
 
 TEST_GROUP(DbaseCannotDeleteState) {
@@ -510,12 +611,6 @@ TEST_GROUP(DbaseInsertState) {
 
 
 TEST(DbaseInsertState,
-     LEFT_inDbaseScrollingMenu_goesToInsertState) {
-    BYTES_EQUAL(MZ_STATE_DBASE_INSERT_RECORD, MZ_getMenuState());
-}
-
-
-TEST(DbaseInsertState,
      ENTER_insertsRecord_andChangesMenuItemToNewRecord) {
     DB_setNumRecords(7);
     MZ_navigateMaze(MZ_NAV_ENTER);
@@ -560,6 +655,14 @@ TEST(DbaseInsertState,
      RIGHT_goesToDbaseScrollState) {
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
+}
+
+
+TEST(DbaseInsertState,
+     RIGHT_inTableWithVariableRecordType_goesToChangeRecordTypeState) {
+    DB_setRecordTypeToVariable();
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
 }
 
 
@@ -623,6 +726,14 @@ TEST(DbaseCannotInsertState,
      RIGHT_goesToDbaseScrollState) {
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
+}
+
+
+TEST(DbaseCannotInsertState,
+     RIGHT_inTableWithVariableRecordType_goesToChangeRecordTypeState) {
+    DB_setRecordTypeToVariable();
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
 }
 
 
@@ -797,6 +908,21 @@ TEST_GROUP(DbaseMenuScrolling) {
 TEST(DbaseMenuScrolling,
      initialStateInDbaseMenu_isScrolling) {
     BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
+}
+
+
+TEST(DbaseMenuScrolling,
+     LEFT_inTableWithFixedRecords_goesToInsertState) {
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(MZ_STATE_DBASE_INSERT_RECORD, MZ_getMenuState());
+}
+
+
+TEST(DbaseMenuScrolling,
+     LEFT_inTableWithVariableRecordType_goesToChangeRecordTypeState) {
+    DB_setRecordTypeToVariable();
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
 }
 
 
