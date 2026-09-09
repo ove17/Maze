@@ -17,7 +17,7 @@ static const MZ_DbaseFunctionsT * DbFuncs = NULL;
 
 static uint8_t MenuId = TOP_MENU;
 static uint8_t MenuItem = 0;
-static uint8_t RecordColumn = 0;
+static uint8_t RecordColumn = 0xFF;
 static MZ_menuStateT MenuState = MZ_STATE_STD_SCROLLING;
 
 
@@ -28,7 +28,7 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
     MenuId = TOP_MENU;
     MenuItem = 0;
     MenuState = MZ_STATE_STD_SCROLLING;
-    RecordColumn = 0;
+    RecordColumn = 0xFF;
 }
 
 
@@ -50,9 +50,11 @@ static uint8_t getChildItemIdOfParent(void) {
 }
 
 
-static void reduceMenuItemBy(const uint8_t delta) {
+// returns true if the value changed
+static bool decreaseMenuItemBy(const uint8_t delta) {
+    const uint8_t initialValue = MenuItem;
     if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
-        return;
+        return false;
     }
     if (MenuItem >= delta) {
         MenuItem -= delta;
@@ -61,6 +63,7 @@ static void reduceMenuItemBy(const uint8_t delta) {
     } else {
         MenuItem = 0;
     }
+    return MenuItem != initialValue;
 }
 
 
@@ -76,12 +79,15 @@ static uint8_t getMaxMenuItems(void) {
 }
 
 
-static void increaseMenuItemBy(const uint8_t delta) {
+// returns true if the value changed
+static bool increaseMenuItemBy(const uint8_t delta) {
+    const uint8_t initialValue = MenuItem;
     const uint8_t max =  getMaxMenuItems();
     MenuItem += delta;
     if (MenuItem > max) {
         MenuItem = max;
     }
+    return MenuItem != initialValue;
 }
 
 
@@ -91,7 +97,8 @@ static void setDefaultMenuState() {
 }
 
 
-static void increaseColumnBy(const uint8_t delta) {
+static bool increaseColumnBy(const uint8_t delta) {
+    const uint8_t initialValue = RecordColumn;
     const uint8_t tableId = MenuDefs[MenuId].dbTableId;
     const uint8_t max = DbFuncs->getNumColumns(tableId, MenuItem) - 1;
     if (RecordColumn + delta < max) {
@@ -99,23 +106,38 @@ static void increaseColumnBy(const uint8_t delta) {
     } else {
         RecordColumn = max;
     }
+    return RecordColumn != initialValue;
 }
 
 
-static void decreaseColumnBy(const uint8_t delta) {
-    if (RecordColumn == 0) {
-        MenuState = MZ_STATE_DBASE_SCROLLING;
-        return;
+// recordType is always 1st column, but must be skipped
+static uint8_t getFirstRecordColumn(void) {
+    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    if (DbFuncs->isRecordTypeVariable(tableId)) {
+        return 1;
+    } else {
+        return 0;
     }
+}
+
+
+static bool decreaseColumnBy(const uint8_t delta) {
+    const uint8_t initialValue = RecordColumn;
+    const uint8_t firstColumnId = getFirstRecordColumn();
+    if (RecordColumn == firstColumnId) {
+        MenuState = MZ_STATE_DBASE_SCROLLING;
+        RecordColumn = 0;
+    } else
     if (RecordColumn > delta) {
         RecordColumn -= delta;
     } else {
-        RecordColumn = 0;
+        RecordColumn = firstColumnId;
     }
+    return RecordColumn != initialValue;
 }
 
 
-// NOTE: keeping track of min/max must be done by changeValue()
+// NOTE: changeValue() must keep limit to min/max values
 static bool changeValueBy(const int8_t delta) {
     const uint8_t tableId = MenuDefs[MenuId].dbTableId;
     return DbFuncs->changeValue(tableId, MenuItem, RecordColumn, delta);
@@ -158,7 +180,7 @@ static void goToDeleteRecordState(void) {
 }
 
 
-static bool trySetMenuStateToChangeRecord() {
+static bool trySetMenuStateToChangeRecordType(void) {
     const uint8_t tableId = MenuDefs[MenuId].dbTableId;
     if (DbFuncs->isRecordTypeVariable(tableId)) {
         MenuState = MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE;
@@ -179,16 +201,24 @@ uint8_t MZ_navigateMaze(MZ_navT nav) {
     const uint8_t action = menuActions[MenuState][nav];
     switch (action) {
         case MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD :
-            increaseMenuItemBy(1);
+            if (!increaseMenuItemBy(1)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD :
-            increaseMenuItemBy(10);
+            if (!increaseMenuItemBy(10)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_SCROLL_1_MENU_ITEM_BACK :
-            reduceMenuItemBy(1);
+            if (!decreaseMenuItemBy(1)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK :
-            reduceMenuItemBy(10);
+            if (!decreaseMenuItemBy(10)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_GO_TO_MENU :
             if (MenuItem == MZ_MENU_ITEM_IS_HEADER) { // to parent
@@ -203,18 +233,27 @@ uint8_t MZ_navigateMaze(MZ_navT nav) {
             break;
         case MZ_ACTION_ENTER_EDIT_RECORD :
             MenuState = MZ_STATE_DBASE_EDITING;
+            RecordColumn = getFirstRecordColumn();
             break;
         case MZ_ACTION_GO_1_COLUMN_FORWARD :
-            increaseColumnBy(1);
+            if (!increaseColumnBy(1)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_GO_1_COLUMN_BACK :
-            decreaseColumnBy(1);
+            if (!decreaseColumnBy(1)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_GO_10_COLUMNS_FORWARD :
-            increaseColumnBy(10);
+            if (!increaseColumnBy(10)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_GO_10_COLUMNS_BACK :
-            decreaseColumnBy(10);
+            if (!decreaseColumnBy(10)) {
+                return MZ_ACTION_NONE;
+            }
             break;
         case MZ_ACTION_INCREASE_VALUE_BY_1 :
             if (!changeValueBy(1)) {
@@ -237,7 +276,7 @@ uint8_t MZ_navigateMaze(MZ_navT nav) {
             }
             break;
         case MZ_ACTION_MANAGE_RECORDS :
-            if (!trySetMenuStateToChangeRecord()) {
+            if (!trySetMenuStateToChangeRecordType()) {
                 goToInsertRecordState();
             }
             break;
@@ -246,9 +285,10 @@ uint8_t MZ_navigateMaze(MZ_navT nav) {
             break;
         case MZ_ACTION_GOTO_CHANGE_RECORD_TYPE :
             MenuState = MZ_STATE_DBASE_CHANGE_RECORD_TYPE;
+            RecordColumn = 0; // recordType is always 1st column
             break;
         case MZ_ACTION_LEAVE_INSERT_RECORD :
-            if (!trySetMenuStateToChangeRecord()) {
+            if (!trySetMenuStateToChangeRecordType()) {
                 MenuState = MZ_STATE_DBASE_SCROLLING;
             }
             break;

@@ -303,19 +303,9 @@ static const MZ_DbaseFunctionsT DbaseFunctions = {
 
 /* TODO:
  *
- * implement changeRecordType
- *      implement ENTER (extra step) to change recordType?
- *          JA, want geen SHIFT-ENTER meer!
- *      insertRecord -> must go to changeType if available
- *
- * editRecord :
- *  columns are offset by 1 in varRecType tables (?)
- *  all actions without result must return MZ_ACTION_NONE
- * QUESTION:
- *  Should all actions without result return MZ_ACTION_NONE??
- *
  * General:
- *  - implement importing custom MenuDefinitions/Actions/States
+ *  - implement children of dbMenus
+ *  - implement setting custom MenuDefinitions/Actions/States
  *
  * Update comments in Maze.h
  * Improve README.md
@@ -369,6 +359,38 @@ TEST(DbaseGotoChangeRecordTypeState,
 }
 
 
+TEST(DbaseGotoChangeRecordTypeState,
+     PLUS1_doesNothing) { // TODO consider UPleavesManageRecords
+    MZ_menuActionT action =  MZ_navigateMaze(MZ_NAV_PLUS1);
+    BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(DbaseGotoChangeRecordTypeState,
+     MINUS1_doesNothing) { // TODO consider DOWNleavesManageRecords
+    MZ_menuActionT action =  MZ_navigateMaze(MZ_NAV_MINUS1);
+    BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(DbaseGotoChangeRecordTypeState,
+     PLUS10_doesNothing) { // TODO consider PGUPleavesManageRecords
+    MZ_menuActionT action =  MZ_navigateMaze(MZ_NAV_PLUS10);
+    BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(DbaseGotoChangeRecordTypeState,
+     MINUS10_doesNothing) { // TODO consider PGDNleavesManageRecords
+    MZ_menuActionT action =  MZ_navigateMaze(MZ_NAV_MINUS10);
+    BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
 // end MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE :
 
 
@@ -413,8 +435,49 @@ TEST(DbaseChangeRecordTypeState,
 }
 
 
-//TODO: plus/minus 1/10
+// TODO: make sure RecordColumn is set to 0 after leaving edit / ChangeRecType
+TEST(DbaseChangeRecordTypeState,
+     PLUS1_increasesRecordTypeBy1) {
+    DB_setValue(10);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_PLUS1);
+    BYTES_EQUAL(11, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(0, MZ_getRecordColumn());
+    BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_INCREASE_VALUE_BY_1, action);
+}
 
+
+TEST(DbaseChangeRecordTypeState,
+     MINUS1_increasesRecordTypeBy1) {
+    DB_setValue(10);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_MINUS1);
+    BYTES_EQUAL(9, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(0, MZ_getRecordColumn());
+    BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_DECREASE_VALUE_BY_1, action);
+}
+
+
+TEST(DbaseChangeRecordTypeState,
+     PLUS10_increasesRecordTypeBy10) {
+    DB_setValue(10);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_PLUS10);
+    BYTES_EQUAL(20, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(0, MZ_getRecordColumn());
+    BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_INCREASE_VALUE_BY_10, action);
+}
+
+
+TEST(DbaseChangeRecordTypeState,
+     MINUS1_increasesRecordTypeBy10) {
+    DB_setValue(10);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_MINUS10);
+    BYTES_EQUAL(0, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(0, MZ_getRecordColumn());
+    BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
+    BYTES_EQUAL(MZ_ACTION_DECREASE_VALUE_BY_10, action);
+}
 
 // end MZ_STATE_DBASE_CHANGE_RECORD_TYPE :
 
@@ -754,6 +817,77 @@ TEST(DbaseCannotInsertState,
 // end MZ_STATE_DBASE_CANNOT_INSERT_RECORD
 
 
+TEST_GROUP(DbaseMenuEditingWithVarRecordType) {
+    void setup() {
+        DB_init();
+        MZ_init(DbaseMenuDef, &DbaseFunctions);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        DB_setRecordTypeToVariable();
+        MZ_navigateMaze(MZ_NAV_RIGHT);
+    }
+
+    void teardown() {
+    }
+};
+
+
+/* MZ_STATE_DBASE_EDITING of tables with variable records :
+ */
+
+
+TEST(DbaseMenuEditingWithVarRecordType,
+     RIGHT_onRecord_skipsFirstAndGoesToSecondColumn) {
+    BYTES_EQUAL(1, MZ_getRecordColumn());
+}
+
+
+TEST(DbaseMenuEditingWithVarRecordType,
+     RIGHT_onRecord_goesToEditMode) {
+    BYTES_EQUAL(MZ_STATE_DBASE_EDITING, MZ_getMenuState());
+}
+
+
+TEST(DbaseMenuEditingWithVarRecordType,
+     LEFT_afterEnteringEditMode_goesToScrollMode) {
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
+}
+
+
+TEST(DbaseMenuEditingWithVarRecordType,
+     LEFT_afterEnteringEditMode_setsColumnBackTo0) {
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(0, MZ_getRecordColumn());
+}
+
+
+TEST(DbaseMenuEditingWithVarRecordType,
+     END_afterEnteringEditMode_goesToColumn11) {
+    MZ_navigateMaze(MZ_NAV_END);
+    BYTES_EQUAL(11, MZ_getRecordColumn());
+}
+
+
+TEST(DbaseMenuEditingWithVarRecordType,
+     HOME_onColumn7_goesToColumn1) {
+    DB_setNumColumns(7);
+    MZ_navigateMaze(MZ_NAV_END);
+    MZ_navigateMaze(MZ_NAV_HOME);
+    BYTES_EQUAL(1, MZ_getRecordColumn());
+}
+
+
+TEST(DbaseMenuEditingWithVarRecordType,
+     HOME_onColumn10_goesToColumn1) {
+    MZ_navigateMaze(MZ_NAV_END);    // RecordColumn is now 10
+    MZ_navigateMaze(MZ_NAV_HOME);
+    BYTES_EQUAL(1, MZ_getRecordColumn());
+}
+
+
+// end  MZ_STATE_DBASE_EDITING of tables with variable records
+
+
 TEST_GROUP(DbaseMenuEditing) {
     void setup() {
         DB_init();
@@ -823,7 +957,13 @@ TEST(DbaseMenuEditing,
 }
 
 
-// actually goes 10 columns right, but there will never be 10 col's
+TEST(DbaseMenuEditing,
+     END_onFirstColumn_goesTo11thColumn) {
+    MZ_navigateMaze(MZ_NAV_END);
+    BYTES_EQUAL(10, MZ_getRecordColumn());
+}
+
+
 TEST(DbaseMenuEditing,
      END_onFirstColumn_goesToLastColumn) {
     DB_setNumColumns(8);
@@ -832,14 +972,25 @@ TEST(DbaseMenuEditing,
 }
 
 
-// TODO: consider exiting edit mode
 TEST(DbaseMenuEditing,
-     HOME_onAnyColumn_GoesToFirstColumn) {
+     HOME_on8thColumn_GoesToFirstColumn_andRemainsInEditingState) {
     DB_setNumColumns(8);
     MZ_navigateMaze(MZ_NAV_END);
+    BYTES_EQUAL(7, MZ_getRecordColumn());
     MZ_navigateMaze(MZ_NAV_HOME);
     BYTES_EQUAL(0, MZ_getRecordColumn());
     BYTES_EQUAL(MZ_STATE_DBASE_EDITING, MZ_getMenuState());
+}
+
+
+TEST(DbaseMenuEditing,
+     HOME_on12thColumn_GoesTo2ndColumn) {
+    DB_setNumColumns(12);
+    MZ_navigateMaze(MZ_NAV_END);
+    MZ_navigateMaze(MZ_NAV_END);
+    BYTES_EQUAL(11, MZ_getRecordColumn());
+    MZ_navigateMaze(MZ_NAV_HOME);
+    BYTES_EQUAL(1, MZ_getRecordColumn());
 }
 
 
