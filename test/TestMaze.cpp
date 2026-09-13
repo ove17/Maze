@@ -9,6 +9,23 @@ extern "C" {
 }
 
 
+/*
+ * TODO: move menuDef external
+ * TODO: generate 1 large menu structure with all features
+ * TODO: make sure DbChild access works just like Db access
+ *      prolly needs getTableId() that automatically switches between them
+ *
+ * General:
+ *  - finish implementing children of dbMenus
+ *  - implement setting custom MenuDefinitions/Actions/States
+ *  - implement invisible/hidden menuItems with magic keystrokes
+ *      ENTER on db item without children could go to child menu?
+ *
+ * Update comments in Maze.h
+ * Improve README.md
+ */
+
+
 enum {
     MAIN_MENU = 0,
     MAIN_MENU_CHILD_1,
@@ -27,24 +44,33 @@ static const uint8_t menuMainChildren[] = {
 
 static const MZ_MenuDefinitionT TextMenuDef[NUM_MENUS] = {
     [MAIN_MENU] = {
-        .menuType = MZ_MENU_TYPE_STANDARD,
-        .numChildren = 3,
-        .children = menuMainChildren,
+        .menuType = MZ_MENU_TYPE_TEXT,
+        .typeTxt = {
+            .numChildren = 3,
+            .children = menuMainChildren,
+        },
     },
     [MAIN_MENU_CHILD_1] = {
-        .menuType = MZ_MENU_TYPE_STANDARD,
-        .numChildren = 18,     // not implemented, for testing UP10 / DOWN10
+        .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
+        .typeTxt = {
+            .numChildren = 18,     // not implemented, for testing UP10 / DOWN10
+        },
     },
     [MAIN_MENU_CHILD_2] = {
-        .menuType = MZ_MENU_TYPE_STANDARD,
-        .numChildren = 8,      // not implemented, for testing UP10 / DOWN10
+        .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
+        .typeTxt = {
+            .numChildren = 8,
+            .children = menuMainChildren,
+        },
     },
     [MAIN_MENU_CHILD_3] = {
-        .menuType = MZ_MENU_TYPE_STANDARD,
-        .numChildren = 0,
+        .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
+        .typeTxt = {
+            .numChildren = 0,
+        },
     },
 };
 
@@ -135,6 +161,13 @@ TEST(TextMenu,
      ENTER_inStartMenu_goesToChildMenu1) {
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(MAIN_MENU_CHILD_1, MZ_getMenuId());
+}
+
+
+TEST(TextMenu,
+     ENTER_inStartMenu_goesTo1stMenuItem) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(0, MZ_getMenuItem());
 }
 
 
@@ -266,24 +299,60 @@ TEST(TextMenu,
 }
 
 
-static const MZ_MenuDefinitionT DbaseMenuDef[NUM_MENUS] = {
-    [MAIN_MENU] = {
-        .menuType = MZ_MENU_TYPE_STANDARD,
-        .numChildren = 3,
-        .children = menuMainChildren,
+// end TextMenu
+
+
+enum {
+    DB_MAIN_MENU = 0,
+    MAIN_MENU_CHILD_DB1,
+    MAIN_MENU_CHILD_DB2,
+    MAIN_MENU_CHILD_DB3,
+    GENERIC_DB_CHILD_TABLE_MENU,
+    NUM_DB_MENUS
+};
+
+
+static const uint8_t dbMenuMainChildren[] = {
+    MAIN_MENU_CHILD_DB1,
+    MAIN_MENU_CHILD_DB2,
+    MAIN_MENU_CHILD_DB3,
+};
+
+
+static const MZ_MenuDefinitionT DbaseMenuDef[NUM_DB_MENUS] = {
+    [DB_MAIN_MENU] = {
+        .menuType = MZ_MENU_TYPE_TEXT,
+        .typeTxt = {
+            .numChildren = 3,
+            .children = dbMenuMainChildren,
+        }
     },
-    [MAIN_MENU_CHILD_1] = {
+    [MAIN_MENU_CHILD_DB1] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .dbTableId = 5,
-        .parent = MAIN_MENU,
+        .parent = DB_MAIN_MENU,
+        .typeDb = {
+            .dbTableId = 5,
+            .dbChildMenu = GENERIC_DB_CHILD_TABLE_MENU,
+        },
     },
-    [MAIN_MENU_CHILD_2] = {
+    [MAIN_MENU_CHILD_DB2] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .parent = MAIN_MENU,
+        .parent = DB_MAIN_MENU,
+        .typeDb = {
+            .dbTableId = 7,
+            .dbChildMenu = GENERIC_DB_CHILD_TABLE_MENU,
+        },
     },
-    [MAIN_MENU_CHILD_3] = {
+    [MAIN_MENU_CHILD_DB3] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .parent = MAIN_MENU,
+        .parent = DB_MAIN_MENU,
+        .typeDb = {
+            .dbTableId = 20,
+        },
+    },
+    [GENERIC_DB_CHILD_TABLE_MENU] = {
+        .menuType = MZ_MENU_TYPE_DBASE_CHILD,
+        .parent = MAIN_MENU_CHILD_DB1,
     },
 };
 
@@ -298,26 +367,18 @@ static const MZ_DbaseFunctionsT DbaseFunctions = {
     .deleteRecord = DB_deleteRecord,
     .canRecordBeDeleted = DB_canRecordBeDeleted,
     .isRecordTypeVariable = DB_isRecordTypeVariable,
+    .getChildTableId = DB_getChildTableId,
 };
 
 
-/* TODO:
- *
- * General:
- *  - implement children of dbMenus
- *  - implement setting custom MenuDefinitions/Actions/States
- *
- * Update comments in Maze.h
- * Improve README.md
- */
 
 
 TEST_GROUP(DbaseGotoChangeRecordTypeState) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
-        DB_setRecordTypeToVariable();
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 0);
+        DB_MOCK_setRecordTypeToVariable();
         MZ_navigateMaze(MZ_NAV_LEFT);
     }
 
@@ -345,8 +406,8 @@ TEST(DbaseGotoChangeRecordTypeState,
 
 TEST(DbaseGotoChangeRecordTypeState,
      LEFT_goesToCannotInsertRecordState_ifMaxRecordsIsReached) {
-    DB_setNumRecords(8);
-    DB_setMaxNumRecords(8);
+    DB_MOCK_setNumRecords(8);
+    DB_MOCK_setMaxNumRecords(8);
     MZ_navigateMaze(MZ_NAV_LEFT);
     BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_INSERT_RECORD, MZ_getMenuState());
 }
@@ -396,10 +457,10 @@ TEST(DbaseGotoChangeRecordTypeState,
 
 TEST_GROUP(DbaseChangeRecordTypeState) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
-        DB_setRecordTypeToVariable();
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 0);
+        DB_MOCK_setRecordTypeToVariable();
         MZ_navigateMaze(MZ_NAV_LEFT);
         MZ_navigateMaze(MZ_NAV_ENTER);
     }
@@ -428,8 +489,8 @@ TEST(DbaseChangeRecordTypeState,
 
 TEST(DbaseChangeRecordTypeState,
      LEFT_goesToCannotInsertRecordState_ifMaxRecordsIsReached) {
-    DB_setNumRecords(8);
-    DB_setMaxNumRecords(8);
+    DB_MOCK_setNumRecords(8);
+    DB_MOCK_setMaxNumRecords(8);
     MZ_navigateMaze(MZ_NAV_LEFT);
     BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_INSERT_RECORD, MZ_getMenuState());
 }
@@ -438,7 +499,7 @@ TEST(DbaseChangeRecordTypeState,
 // TODO: make sure RecordColumn is set to 0 after leaving edit / ChangeRecType
 TEST(DbaseChangeRecordTypeState,
      PLUS1_increasesRecordTypeBy1) {
-    DB_setValue(10);
+    DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_PLUS1);
     BYTES_EQUAL(11, DB_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
@@ -449,7 +510,7 @@ TEST(DbaseChangeRecordTypeState,
 
 TEST(DbaseChangeRecordTypeState,
      MINUS1_increasesRecordTypeBy1) {
-    DB_setValue(10);
+    DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_MINUS1);
     BYTES_EQUAL(9, DB_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
@@ -460,7 +521,7 @@ TEST(DbaseChangeRecordTypeState,
 
 TEST(DbaseChangeRecordTypeState,
      PLUS10_increasesRecordTypeBy10) {
-    DB_setValue(10);
+    DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_PLUS10);
     BYTES_EQUAL(20, DB_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
@@ -471,7 +532,7 @@ TEST(DbaseChangeRecordTypeState,
 
 TEST(DbaseChangeRecordTypeState,
      MINUS1_increasesRecordTypeBy10) {
-    DB_setValue(10);
+    DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_MINUS10);
     BYTES_EQUAL(0, DB_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
@@ -484,10 +545,10 @@ TEST(DbaseChangeRecordTypeState,
 
 TEST_GROUP(DbaseCannotDeleteState) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        DB_setRecordThatCannotBeDeletedTo(0);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        DB_MOCK_setRecordThatCannotBeDeletedTo(0);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 0);
         MZ_navigateMaze(MZ_NAV_LEFT);
         MZ_navigateMaze(MZ_NAV_LEFT);
     }
@@ -532,8 +593,8 @@ TEST(DbaseCannotDeleteState,
 
 TEST(DbaseCannotDeleteState,
      RIGHT_goesToInsertRecordState_ifNumRecordsNotReached) {
-    DB_setNumRecords(3);
-    DB_setMaxNumRecords(4);
+    DB_MOCK_setNumRecords(3);
+    DB_MOCK_setMaxNumRecords(4);
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_INSERT_RECORD, MZ_getMenuState());
 }
@@ -541,8 +602,8 @@ TEST(DbaseCannotDeleteState,
 
 TEST(DbaseCannotDeleteState,
      RIGHT_goesToCannotInsertRecordState_ifNumRecordsReached) {
-    DB_setNumRecords(2);
-    DB_setMaxNumRecords(2);
+    DB_MOCK_setNumRecords(2);
+    DB_MOCK_setMaxNumRecords(2);
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_INSERT_RECORD, MZ_getMenuState());
 }
@@ -553,13 +614,13 @@ TEST(DbaseCannotDeleteState,
 
 TEST_GROUP(DbaseDeleteState) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
         goToDeleteStateOnMenuItem(0);
     }
 
     void goToDeleteStateOnMenuItem(const uint8_t menuItem) {
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, menuItem);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, menuItem);
         MZ_navigateMaze(MZ_NAV_LEFT);
         MZ_navigateMaze(MZ_NAV_LEFT);
     }
@@ -596,8 +657,8 @@ TEST(DbaseDeleteState,
 
 TEST(DbaseDeleteState,
     RIGHT_goesToInsertRecordState_ifNumRecordsNotReached) {
-    DB_setNumRecords(19);
-    DB_setMaxNumRecords(20);
+    DB_MOCK_setNumRecords(19);
+    DB_MOCK_setMaxNumRecords(20);
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_INSERT_RECORD, MZ_getMenuState());
 }
@@ -605,8 +666,8 @@ TEST(DbaseDeleteState,
 
 TEST(DbaseDeleteState,
      RIGHT_goesToCannotInsertRecordState_ifNumRecordsReached) {
-    DB_setNumRecords(20);
-    DB_setMaxNumRecords(20);
+    DB_MOCK_setNumRecords(20);
+    DB_MOCK_setMaxNumRecords(20);
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_INSERT_RECORD, MZ_getMenuState());
 }
@@ -614,7 +675,7 @@ TEST(DbaseDeleteState,
 
 TEST(DbaseDeleteState,
      ENTER_deletesRecord) {
-    DB_setNumRecords(7);
+    DB_MOCK_setNumRecords(7);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(6, DB_getNumRecords(5));
 }
@@ -622,7 +683,7 @@ TEST(DbaseDeleteState,
 
 TEST(DbaseDeleteState,
      afterDeletingRecord_menuItemRemainsTheSame) {
-    DB_setNumRecords(7);
+    DB_MOCK_setNumRecords(7);
     goToDeleteStateOnMenuItem(6);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(5, MZ_getMenuItem());
@@ -631,7 +692,7 @@ TEST(DbaseDeleteState,
 
 TEST(DbaseDeleteState,
      ifENTERdeletesLastRecord_MenuItemDecreasesBy1) {
-    DB_setNumRecords(7);
+    DB_MOCK_setNumRecords(7);
     goToDeleteStateOnMenuItem(6);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(5, MZ_getMenuItem());
@@ -648,7 +709,7 @@ TEST(DbaseDeleteState,
 TEST(DbaseDeleteState,
      ENTER_goesToCannotDeleteState_ifNextRecordMayNotBeDeleted) {
     goToDeleteStateOnMenuItem(4);
-    DB_setRecordThatCannotBeDeletedTo(5);
+    DB_MOCK_setRecordThatCannotBeDeletedTo(5);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_DELETE_RECORD, MZ_getMenuState());
 }
@@ -659,9 +720,9 @@ TEST(DbaseDeleteState,
 
 TEST_GROUP(DbaseInsertState) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 0);
         MZ_navigateMaze(MZ_NAV_LEFT);
     }
 
@@ -675,7 +736,7 @@ TEST_GROUP(DbaseInsertState) {
 
 TEST(DbaseInsertState,
      ENTER_insertsRecord_andChangesMenuItemToNewRecord) {
-    DB_setNumRecords(7);
+    DB_MOCK_setNumRecords(7);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(8, DB_getNumRecords(5));
     BYTES_EQUAL(1, MZ_getMenuItem());
@@ -684,8 +745,8 @@ TEST(DbaseInsertState,
 
 TEST(DbaseInsertState,
      ENTER_remainsInInsertState_ifMaxRecordsNotReached) {
-    DB_setNumRecords(6);
-    DB_setMaxNumRecords(8);
+    DB_MOCK_setNumRecords(6);
+    DB_MOCK_setMaxNumRecords(8);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(MZ_STATE_DBASE_INSERT_RECORD, MZ_getMenuState());
 }
@@ -693,8 +754,8 @@ TEST(DbaseInsertState,
 
 TEST(DbaseInsertState,
      ENTER_goesToCannotInsertState_ifMaxRecordsReached) {
-    DB_setNumRecords(7);
-    DB_setMaxNumRecords(8);
+    DB_MOCK_setNumRecords(7);
+    DB_MOCK_setMaxNumRecords(8);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_INSERT_RECORD, MZ_getMenuState());
 }
@@ -708,7 +769,7 @@ TEST(DbaseInsertState,
 
 TEST(DbaseInsertState,
      LEFT_goesToCannotDeleteState_ifCurrentItemCanNotBeDeleted) {
-    DB_setRecordThatCannotBeDeletedTo(0);
+    DB_MOCK_setRecordThatCannotBeDeletedTo(0);
     MZ_navigateMaze(MZ_NAV_LEFT);
     BYTES_EQUAL(MZ_STATE_DBASE_CANNOT_DELETE_RECORD, MZ_getMenuState());
 }
@@ -723,7 +784,7 @@ TEST(DbaseInsertState,
 
 TEST(DbaseInsertState,
      RIGHT_inTableWithVariableRecordType_goesToChangeRecordTypeState) {
-    DB_setRecordTypeToVariable();
+    DB_MOCK_setRecordTypeToVariable();
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
 }
@@ -748,11 +809,11 @@ TEST(DbaseInsertState,
 
 TEST_GROUP(DbaseCannotInsertState) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        DB_setNumRecords(8);
-        DB_setMaxNumRecords(8);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        DB_MOCK_setNumRecords(8);
+        DB_MOCK_setMaxNumRecords(8);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 0);
         MZ_navigateMaze(MZ_NAV_LEFT);
     }
 
@@ -794,7 +855,7 @@ TEST(DbaseCannotInsertState,
 
 TEST(DbaseCannotInsertState,
      RIGHT_inTableWithVariableRecordType_goesToChangeRecordTypeState) {
-    DB_setRecordTypeToVariable();
+    DB_MOCK_setRecordTypeToVariable();
     MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
 }
@@ -819,10 +880,10 @@ TEST(DbaseCannotInsertState,
 
 TEST_GROUP(DbaseMenuEditingWithVarRecordType) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
-        DB_setRecordTypeToVariable();
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 0);
+        DB_MOCK_setRecordTypeToVariable();
         MZ_navigateMaze(MZ_NAV_RIGHT);
     }
 
@@ -870,7 +931,7 @@ TEST(DbaseMenuEditingWithVarRecordType,
 
 TEST(DbaseMenuEditingWithVarRecordType,
      HOME_onColumn7_goesToColumn1) {
-    DB_setNumColumns(7);
+    DB_MOCK_setNumColumns(7);
     MZ_navigateMaze(MZ_NAV_END);
     MZ_navigateMaze(MZ_NAV_HOME);
     BYTES_EQUAL(1, MZ_getRecordColumn());
@@ -890,9 +951,9 @@ TEST(DbaseMenuEditingWithVarRecordType,
 
 TEST_GROUP(DbaseMenuEditing) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 0);
         MZ_navigateMaze(MZ_NAV_RIGHT);
     }
 
@@ -909,7 +970,7 @@ TEST_GROUP(DbaseMenuEditing) {
 
 TEST(DbaseMenuEditing,
      MINUS10_decreasesDbaseValueBy10) {
-    DB_setValue(12);
+    DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_MINUS10);
     BYTES_EQUAL(2, DB_getValue(5, 0, 0));
 }
@@ -917,7 +978,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      PLUS10_increasesDbaseValueBy10) {
-    DB_setValue(12);
+    DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_PLUS10);
     BYTES_EQUAL(22, DB_getValue(5, 0, 0));
 }
@@ -925,8 +986,8 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      MINUS1_onMinDbaseValue_returnsACTION_NONE) {
-    DB_setValue(4);
-    DB_setMinValue(4);
+    DB_MOCK_setValue(4);
+    DB_MOCK_setMinValue(4);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_MINUS1);
     BYTES_EQUAL(MZ_ACTION_NONE, action);
 }
@@ -934,8 +995,8 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      PLUS1_onMaxDbaseValue_returnsACTION_NONE) {
-    DB_setValue(8);
-    DB_setMaxValue(8);
+    DB_MOCK_setValue(8);
+    DB_MOCK_setMaxValue(8);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_PLUS1);
     BYTES_EQUAL(MZ_ACTION_NONE, action);
 }
@@ -943,7 +1004,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      MINUS1_decreasesDbaseValueBy1) {
-    DB_setValue(12);
+    DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_MINUS1);
     BYTES_EQUAL(11, DB_getValue(5, 0, 0));
 }
@@ -951,7 +1012,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      PLUS1_increasesDbaseValueBy1) {
-    DB_setValue(12);
+    DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_PLUS1);
     BYTES_EQUAL(13, DB_getValue(5, 0, 0));
 }
@@ -966,7 +1027,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      END_onFirstColumn_goesToLastColumn) {
-    DB_setNumColumns(8);
+    DB_MOCK_setNumColumns(8);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(7, MZ_getRecordColumn());
 }
@@ -974,7 +1035,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      HOME_on8thColumn_GoesToFirstColumn_andRemainsInEditingState) {
-    DB_setNumColumns(8);
+    DB_MOCK_setNumColumns(8);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(7, MZ_getRecordColumn());
     MZ_navigateMaze(MZ_NAV_HOME);
@@ -985,7 +1046,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      HOME_on12thColumn_GoesTo2ndColumn) {
-    DB_setNumColumns(12);
+    DB_MOCK_setNumColumns(12);
     MZ_navigateMaze(MZ_NAV_END);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(11, MZ_getRecordColumn());
@@ -1011,7 +1072,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      RIGHT_onLastColumn_staysOnLastColumn) {
-    DB_setNumColumns(4);
+    DB_MOCK_setNumColumns(4);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(3, MZ_getRecordColumn());
     MZ_navigateMaze(MZ_NAV_RIGHT);
@@ -1041,11 +1102,13 @@ TEST(DbaseMenuEditing,
 // end MZ_STATE_DBASE_EDITING
 
 
-TEST_GROUP(DbaseMenuScrolling) {
+TEST_GROUP(DbaseMenuScrolling_Child) {
     void setup() {
-        DB_init();
+        DB_MOCK_init();
         MZ_init(DbaseMenuDef, &DbaseFunctions);
-        MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 0);
+        MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 4);
+        DB_MOCK_setChildTableId(18);
+        MZ_navigateMaze(MZ_NAV_ENTER);
     }
 
     void teardown() {
@@ -1053,7 +1116,100 @@ TEST_GROUP(DbaseMenuScrolling) {
 };
 
 
-// MZ_STATE_DBASE_SCROLLING :
+/* MZ_STATE_DBASE_SCROLLING dbChild :
+ *
+ * TODO:
+ *   DB functions act on children
+ */
+
+
+TEST(DbaseMenuScrolling_Child,
+     ENTER_inMenuWithChildren_remainsInStateDbScrolling) {
+    BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
+}
+
+
+TEST(DbaseMenuScrolling_Child,
+     ENTER_inMenuWithChildren_goesTo1stMenuItem) {
+    BYTES_EQUAL(0, MZ_getMenuItem());
+}
+
+
+TEST(DbaseMenuScrolling_Child,
+     UP_inDbChildMenu_goesToHeader) {
+    MZ_navigateMaze(MZ_NAV_UP);
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+}
+
+
+TEST(DbaseMenuScrolling_Child,
+     UPthenENTER_inDbChildMenu_goesBackToDbParentMenu) {
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(MAIN_MENU_CHILD_DB1, MZ_getMenuId());
+}
+
+
+TEST(DbaseMenuScrolling_Child,
+     UPthenENTER_inDbChildMenu_goesBackToParentMenuItem4) {
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(4, MZ_getMenuItem());
+}
+
+
+TEST(DbaseMenuScrolling_Child,
+     DOWN_inMenuWithChildren_accessesChildDbTable) {
+    // NOTE: DOWN must call getNumRecords(tableId)
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    BYTES_EQUAL(18, DB_MOCK_getLastAccessedTableId());
+}
+
+
+// end MZ_STATE_DBASE_SCROLLING dbChild
+
+
+TEST_GROUP(DbaseMenuScrolling) {
+    void setup() {
+        DB_MOCK_init();
+        MZ_init(DbaseMenuDef, &DbaseFunctions);
+        MZ_navigateMaze(MZ_NAV_DOWN);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+    }
+
+    void teardown() {
+    }
+};
+
+
+/* MZ_STATE_DBASE_SCROLLING :
+ *
+ */
+
+
+TEST(DbaseMenuScrolling,
+     ENTER_onMenuWithChildren_goesTo1stMenuItem) {
+    BYTES_EQUAL(0, MZ_getMenuItem());
+}
+
+
+TEST(DbaseMenuScrolling,
+     ENTER_onMenuWithoutChildren_returnsACTION_NONE) {
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(MAIN_MENU_CHILD_DB2, MZ_getMenuId());
+    BYTES_EQUAL(7, DB_MOCK_getLastAccessedTableId());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(DbaseMenuScrolling,
+     ENTER_onMenuWithChildren_goesToChildMenu) {
+    DB_MOCK_setChildTableId(18);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(MZ_ACTION_GO_TO_MENU_FROM_DB, action);
+    BYTES_EQUAL(0, MZ_getMenuItem());
+    BYTES_EQUAL(GENERIC_DB_CHILD_TABLE_MENU, MZ_getMenuId());
+}
 
 
 TEST(DbaseMenuScrolling,
@@ -1071,7 +1227,7 @@ TEST(DbaseMenuScrolling,
 
 TEST(DbaseMenuScrolling,
      LEFT_inTableWithVariableRecordType_goesToChangeRecordTypeState) {
-    DB_setRecordTypeToVariable();
+    DB_MOCK_setRecordTypeToVariable();
     MZ_navigateMaze(MZ_NAV_LEFT);
     BYTES_EQUAL(MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE, MZ_getMenuState());
 }
@@ -1088,7 +1244,7 @@ TEST(DbaseMenuScrolling,
 
 TEST(DbaseMenuScrolling,
      UP_onRecord_goesToPreviousRecord) {
-    MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 5);
+    MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 5);
     MZ_navigateMaze(MZ_NAV_UP);
     BYTES_EQUAL(4, MZ_getMenuItem());
 }
@@ -1096,8 +1252,8 @@ TEST(DbaseMenuScrolling,
 
 TEST(DbaseMenuScrolling,
      DOWN_onRecord_doesNotGoHigherThanNumRecords) {
-    DB_setNumRecords(12);
-    MZ_gotoMenuItem(MAIN_MENU_CHILD_1, 11);
+    DB_MOCK_setNumRecords(12);
+    MZ_gotoMenuItem(MAIN_MENU_CHILD_DB1, 11);
     MZ_navigateMaze(MZ_NAV_DOWN);
     BYTES_EQUAL(11, MZ_getMenuItem());
 }
@@ -1116,3 +1272,21 @@ TEST(DbaseMenuScrolling,
     MZ_navigateMaze(MZ_NAV_UP);
     BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
 }
+
+
+TEST(DbaseMenuScrolling,
+     ENTER_onHeader_goesToParentMenu) {
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(DB_MAIN_MENU, MZ_getMenuId());
+}
+
+
+TEST(DbaseMenuScrolling,
+     ENTER_onHeader_goesToParentMenuItem1) {
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(1, MZ_getMenuItem());
+}
+
+// end // MZ_STATE_DBASE_SCROLLING

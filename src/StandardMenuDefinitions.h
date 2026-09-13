@@ -6,23 +6,12 @@
 #include "Maze.h"
 
 
-static const MZ_menuStateT menuStandaardStates[1] = {
-    MZ_STATE_STD_SCROLLING,
-};
-
-static const MZ_menuStateT menuDbaseStates[2] = {
-    MZ_STATE_DBASE_SCROLLING,
-    MZ_STATE_DBASE_EDITING
-};
-
 static const MZ_menuTypeDefT MenuTypeDefs[MZ_MENU_TYPE_COUNT] = {
-    [MZ_MENU_TYPE_STANDARD] = {
-        .numStates = 1,
-        .states = menuStandaardStates,
+    [MZ_MENU_TYPE_TEXT] = {
+        .defaultState = MZ_STATE_STD_SCROLLING,
     },
     [MZ_MENU_TYPE_DBASE] = {
-        .numStates = 2,
-        .states = menuDbaseStates,
+        .defaultState = MZ_STATE_DBASE_SCROLLING,
     },
 };
 
@@ -37,7 +26,7 @@ static const MZ_menuActionT menuActions[MZ_STATE_COUNT][MZ_NAV_COUNT] = {
         [MZ_NAV_DOWN10]     = MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
     },
     [MZ_STATE_DBASE_SCROLLING] = {
-        //        [MZ_NAV_ENTER]  = MZ_ACTION_GO_TO_SUBTABLE,
+        [MZ_NAV_ENTER]      = MZ_ACTION_GO_TO_MENU_FROM_DB,
         [MZ_NAV_UP]         = MZ_ACTION_SCROLL_1_MENU_ITEM_BACK,
         [MZ_NAV_UP10]       = MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
         [MZ_NAV_DOWN]       = MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,

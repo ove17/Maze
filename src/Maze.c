@@ -8,6 +8,7 @@
 
 
 #define TOP_MENU 0
+#define NO_MENU 0xFF
 #define CURSOR_ROW_HEADER 0
 #define CURSOR_ROW_BROWSING 2
 #define CURSOR_COL_BROWSING 0
@@ -32,21 +33,14 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
 }
 
 
-static uint8_t getChildItemIdOfParent(void) {
-//static uint8_t getChildIndex(void) { // FIXME: is this a better name?
-/*    if (_current.menu == MENU_INSTRUCTIONS) {   // FIXME: .menuType == DBASE_CHILD
-        uint8_t loopNo = _current.loopNo;       // FIXME: maze does not know loopNo
-        _current.loopNo = 0;
-        return loopNo;
-    } else {*/
-        MZ_MenuDefinitionT menuCurrent = MenuDefs[MenuId];
-        MZ_MenuDefinitionT menuParent = MenuDefs[menuCurrent.parent];
-        uint8_t i = 0;
-        while (menuParent.children[i] != MenuId) {
-            i++;
-        }
-        return i;
-//    }
+static uint8_t getTableId(void) {
+    return MenuDefs[MenuId].typeDb.dbTableId;
+}
+
+
+static uint8_t getChildTableId(void) {
+    const uint8_t tableId = getTableId();
+    return DbFuncs->getChildTableId(tableId, MenuItem); //FIXME: ParentMenuItem?
 }
 
 
@@ -68,11 +62,15 @@ static bool decreaseMenuItemBy(const uint8_t delta) {
 
 
 static uint8_t getMaxMenuItems(void) {
-    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_STANDARD) {
-        return MenuDefs[MenuId].numChildren - 1;
+    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_TEXT) {
+        return MenuDefs[MenuId].typeTxt.numChildren - 1;
     } else
     if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
-        uint8_t tableId = MenuDefs[MenuId].dbTableId;
+        const uint8_t tableId = getTableId();
+        return DbFuncs->getNumRecords(tableId) - 1;
+    } else
+    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE_CHILD) {
+        const uint8_t tableId = getChildTableId();
         return DbFuncs->getNumRecords(tableId) - 1;
     }
     assert(0 && "no menu type specified");
@@ -82,7 +80,7 @@ static uint8_t getMaxMenuItems(void) {
 // returns true if the value changed
 static bool increaseMenuItemBy(const uint8_t delta) {
     const uint8_t initialValue = MenuItem;
-    const uint8_t max =  getMaxMenuItems();
+    const uint8_t max = getMaxMenuItems();
     MenuItem += delta;
     if (MenuItem > max) {
         MenuItem = max;
@@ -93,13 +91,13 @@ static bool increaseMenuItemBy(const uint8_t delta) {
 
 static void setDefaultMenuState() {
     MZ_menuTypeT menuType = MenuDefs[MenuId].menuType;
-    MenuState = MenuTypeDefs[menuType].states[0];
+    MenuState = MenuTypeDefs[menuType].defaultState;
 }
 
 
 static bool increaseColumnBy(const uint8_t delta) {
     const uint8_t initialValue = RecordColumn;
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     const uint8_t max = DbFuncs->getNumColumns(tableId, MenuItem) - 1;
     if (RecordColumn + delta < max) {
         RecordColumn += delta;
@@ -112,7 +110,7 @@ static bool increaseColumnBy(const uint8_t delta) {
 
 // recordType is always 1st column, but must be skipped
 static uint8_t getFirstRecordColumn(void) {
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     if (DbFuncs->isRecordTypeVariable(tableId)) {
         return 1;
     } else {
@@ -139,20 +137,20 @@ static bool decreaseColumnBy(const uint8_t delta) {
 
 // NOTE: changeValue() must keep limit to min/max values
 static bool changeValueBy(const int8_t delta) {
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     return DbFuncs->changeValue(tableId, MenuItem, RecordColumn, delta);
 }
 
 
 static void insertRecord(void) {
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     DbFuncs->insertRecordAfter(tableId, MenuItem);
     MenuItem++;
 }
 
 
 static void deleteRecord(void) {
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     DbFuncs->deleteRecord(tableId, MenuItem);
     if (MenuItem >= DbFuncs->getNumRecords(tableId)) {
         MenuItem--;
@@ -161,7 +159,7 @@ static void deleteRecord(void) {
 
 
 static void goToInsertRecordState(void) {
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     if (DbFuncs->canRecordBeAdded(tableId)) {
         MenuState = MZ_STATE_DBASE_INSERT_RECORD;
     } else {
@@ -171,7 +169,7 @@ static void goToInsertRecordState(void) {
 
 
 static void goToDeleteRecordState(void) {
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     if (DbFuncs->canRecordBeDeleted(tableId, MenuItem)) {
         MenuState = MZ_STATE_DBASE_DELETE_RECORD;
     } else {
@@ -181,7 +179,7 @@ static void goToDeleteRecordState(void) {
 
 
 static bool trySetMenuStateToChangeRecordType(void) {
-    const uint8_t tableId = MenuDefs[MenuId].dbTableId;
+    const uint8_t tableId = getTableId();
     if (DbFuncs->isRecordTypeVariable(tableId)) {
         MenuState = MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE;
         return true;
@@ -191,15 +189,84 @@ static bool trySetMenuStateToChangeRecordType(void) {
 }
 
 
+// NOTE: does not work for MZ_MENU_TYPE_DBASE_CHILD
+static uint8_t getChildItemIdOfParent(void) {
+    MZ_MenuDefinitionT menuCurrent = MenuDefs[MenuId];
+    MZ_MenuDefinitionT menuParent = MenuDefs[menuCurrent.parent];
+    uint8_t i = 0;
+    while (menuParent.typeTxt.children[i] != MenuId) {
+        i++;
+    }
+    return i;
+}
+
+
+static void goToParentMenu(void) {
+    MenuItem = getChildItemIdOfParent();
+    MenuId = MenuDefs[MenuId].parent;
+    setDefaultMenuState();
+}
+
+
+static void goToChildMenu() {
+    MenuId = MenuDefs[MenuId].typeTxt.children[MenuItem];
+    MenuItem = 0;
+    setDefaultMenuState();
+}
+
+
+/* Go to a menu from a DB or DB child menu.
+ * NOTE: parent data must be stored as DB children are not explicitly defined
+ *  in the menuDef
+ */
+static bool goToMenuFromDb(void) {
+    static uint8_t parentMenuId = NO_MENU;
+    static uint8_t parentMenuItem = 0;
+    if (MenuItem == MZ_MENU_ITEM_IS_HEADER) { // to parent
+        if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
+            goToParentMenu();
+        } else if (parentMenuId != NO_MENU) {
+            MenuId = parentMenuId;
+            MenuItem = parentMenuItem;
+            parentMenuId = NO_MENU;
+        } else {
+            return false; // No DB parent stored
+        }
+    } else { // to DB child
+        if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
+            const uint8_t childTableId = getChildTableId();
+            if (childTableId != NO_MENU) {
+                parentMenuId = MenuId;
+                parentMenuItem = MenuItem;
+                MenuId = MenuDefs[MenuId].typeDb.dbChildMenu;
+                MenuItem = 0;
+            } else {
+                return false; // No DB child found
+            }
+        } else {
+            return false; // DB child must not have children
+        }
+    }
+    return true;
+}
+
+
 /*
- * MZ_navigateMaze(nav) executes the function AND its returnvalue
+ * MZ_navigateMaze(nav) executes the action AND its returnvalue
  *  contains the actionId
  *
  * CUSTOM functions only return actionId, there is no code execution
  */
-uint8_t MZ_navigateMaze(MZ_navT nav) {
+MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
     const uint8_t action = menuActions[MenuState][nav];
     switch (action) {
+        case MZ_ACTION_GO_TO_MENU :
+            if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
+                goToParentMenu();
+            } else {
+                goToChildMenu();
+            }
+            break;
         case MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD :
             if (!increaseMenuItemBy(1)) {
                 return MZ_ACTION_NONE;
@@ -220,15 +287,9 @@ uint8_t MZ_navigateMaze(MZ_navT nav) {
                 return MZ_ACTION_NONE;
             }
             break;
-        case MZ_ACTION_GO_TO_MENU :
-            if (MenuItem == MZ_MENU_ITEM_IS_HEADER) { // to parent
-                MenuItem = getChildItemIdOfParent();
-                MenuId = MenuDefs[MenuId].parent;
-                setDefaultMenuState();
-            } else { // to child
-                MenuId = MenuDefs[MenuId].children[MenuItem];
-                MenuItem = 0;
-                setDefaultMenuState();
+        case MZ_ACTION_GO_TO_MENU_FROM_DB :
+            if (!goToMenuFromDb()) {
+                return MZ_ACTION_NONE;
             }
             break;
         case MZ_ACTION_ENTER_EDIT_RECORD :

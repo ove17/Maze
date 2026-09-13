@@ -3,28 +3,45 @@
  *
  * Library for navigating UI menus.
  *
+ * Maze implements the following:
+ *  MZ_navT - the navigation input
+ *          The caller may map this from its (keyboard) input.
+ *  MZ_menuActionT - actions that result from the navigation input
+ *  MZ_menuTypeT - the basic menu type, Maze provides:
+ *                      MZ_MENU_TYPE_TEXT
+ *                      MZ_MENU_TYPE_DBASE
+ *  MZ_menuStateT - a menuType may have multiple states with different
+ *                  nav-action maps
+ *
+ * StandardMenuDefinitions.h defines the nav-action maps for each menuState
+ *
  * Maze implements the following menu concept:
  *  - character display based, fixed height x width
  *  - the cursor indicates which character has focus
  *  - the first line holds the title / header and is static
- *  - all further lines lines show menu content and can be scrolled
+ *  - all further lines lines show menu content and can be scrolled using
+ *      NAV_UP/DOWN
  *  - the middle line of the menu content has focus during scrolling
  *  - the cursor is at the 1st character during scrolling
  *  - the top-left character(0,0) is the [HOME] position to go one menu up
  *  - there is 1 TOP_MENU, all others are (grand...)children of TOP_MENU
  *  - TOP_MENU must be the first menu in the menuDefinition array
- *  - TOP_MENU will be active at launch
- *  - the cursor location at launch is row,col (2,0)
+ *  - TOP_MENU will be active at init
+ *  - the cursor location at init is row,col (2,0)
  *       i.e. the 1st item of the 1st menu
  *
+ * Maze supports basic database browsing and editing:
+ *  - database access functions must be provided by the caller
+ *  - a dbase menuType is available
  *
+ * Maze allows extending its own menuTypes, actions and navigations
  *
  */
 
-//  header = static, OR cursor-pos-defined functions
+//  header = static and may have cursor-pos-defined functions
 //  define x,y cursor positions + action + key?
 //          NOTE: x is different for different languages!
-//          SO: editing must be automatic!
+//          SO: editing must be automatic! with (DB_)getCursorXfor(columnId) oid
 
 
 #ifndef MAZE_H
@@ -70,11 +87,12 @@ typedef enum {
 typedef uint8_t MZ_menuActionT;
 enum {
     MZ_ACTION_NONE,
+    MZ_ACTION_GO_TO_MENU,
     MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
     MZ_ACTION_SCROLL_1_MENU_ITEM_BACK,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
-    MZ_ACTION_GO_TO_MENU,
+    MZ_ACTION_GO_TO_MENU_FROM_DB,
     MZ_ACTION_ENTER_EDIT_RECORD,
     MZ_ACTION_GO_1_COLUMN_FORWARD,
     MZ_ACTION_GO_1_COLUMN_BACK,
@@ -103,8 +121,9 @@ enum {
  */
 typedef uint8_t MZ_menuTypeT;
 enum {
-    MZ_MENU_TYPE_STANDARD,
+    MZ_MENU_TYPE_TEXT,
     MZ_MENU_TYPE_DBASE,
+    MZ_MENU_TYPE_DBASE_CHILD,
     MZ_MENU_TYPE_COUNT
 };
 
@@ -129,10 +148,8 @@ enum {
 };
 
 
-// FIXME: numStates, states[1+] are not used, only states[0]
 typedef struct {
-    const uint8_t numStates;
-    const MZ_menuStateT * states;
+    const MZ_menuStateT defaultState;
 } MZ_menuTypeDefT;
 
 
@@ -145,11 +162,20 @@ typedef struct {
     const uint8_t parent;
     const MZ_menuTypeT menuType;
     union {
-        const uint8_t numChildren;
-        const uint8_t dbTableId;
+        struct {
+            const uint8_t numChildren;
+            const uint8_t * children;
+        } typeTxt;
+        struct {
+            const uint8_t dbTableId;
+            const uint8_t dbChildMenu;
+        } typeDb;
+        struct {
+            uint8_t noProperties;
+        } typeDbChild;
     };
-    const uint8_t * children;   // TODO union: childTables, childMenus ?
 } MZ_MenuDefinitionT;
+
 
 
 /*
@@ -175,6 +201,8 @@ typedef struct {
     bool (*canRecordBeDeleted)(uint8_t tableId,
                                uint8_t recordId);
     bool (*isRecordTypeVariable)(uint8_t tableId);
+    uint8_t (*getChildTableId)(uint8_t tableId,
+                               uint8_t recordId);
 } MZ_DbaseFunctionsT;
 
 

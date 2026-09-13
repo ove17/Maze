@@ -1,6 +1,5 @@
 // dbMock.h
 
-
 #ifndef DB_MOCK_H
 #define DB_MOCK_H
 
@@ -27,19 +26,28 @@ bool DB_canRecordBeDeleted(const uint8_t tableId,
                            const uint8_t recordId);
 bool DB_deleteRecord(const uint8_t tableId,
                      const uint8_t recordId);
+
+// TODO: implement in BDB:
 bool DB_isRecordTypeVariable(const uint8_t tableId);
+uint8_t DB_getChildTableId(const uint8_t tableId,
+                           const uint8_t recordId);
 
 
-// for setting test values:
+// the following functions are only for setting test values:
 
-void DB_init(void);
-void DB_setNumRecords(const uint8_t numRecords);
-void DB_setMaxNumRecords(const uint8_t maxNumRecords);
-void DB_setNumColumns(const uint8_t numColumns);
-void DB_setValue(const uint32_t value);
-void DB_setMaxValue(const uint16_t maxValue);
-void DB_setMinValue(const uint16_t minValue);
-void DB_setRecordThatCannotBeDeletedTo(const uint8_t recordId);
-void DB_setRecordTypeToVariable(void);
+void DB_MOCK_init(void);
+void DB_MOCK_setNumRecords(const uint8_t numRecords);
+void DB_MOCK_setMaxNumRecords(const uint8_t maxNumRecords);
+void DB_MOCK_setNumColumns(const uint8_t numColumns);
+void DB_MOCK_setValue(const uint32_t value);
+void DB_MOCK_setMaxValue(const uint16_t maxValue);
+void DB_MOCK_setMinValue(const uint16_t minValue);
+void DB_MOCK_setRecordThatCannotBeDeletedTo(const uint8_t recordId);
+void DB_MOCK_setRecordTypeToVariable(void);
+void DB_MOCK_setChildTableId(const uint8_t tableId);
+
+// inspection:
+
+uint8_t DB_MOCK_getLastAccessedTableId(void);
 
 #endif
