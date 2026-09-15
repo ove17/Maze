@@ -375,6 +375,7 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
 }
 
 
+// TODO: remove this function, it should not exist
 void MZ_gotoMenuItem(const uint8_t menuId,
                      const uint8_t menuItem) {
     MenuId = menuId;

@@ -36,6 +36,8 @@
  *
  * Maze allows extending its own menuTypes, actions and navigations
  *
+ * MenuItem starts at 0 for the 1st menu item (txt and db)
+ *
  */
 
 //  header = static and may have cursor-pos-defined functions

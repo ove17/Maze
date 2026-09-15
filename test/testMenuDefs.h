@@ -3,104 +3,104 @@
 
 enum {
     MAIN_MENU = 0,
-    MAIN_MENU_CHILD_1,
-    MAIN_MENU_CHILD_2,
-    MAIN_MENU_CHILD_3,
-    NUM_MENUS
+        CHILD_MENU_1,
+            // 13 children (dummy)
+        CHILD_MENU_2,
+            // 0 children
+        CHILD_MENU_3,
+            GRANDCHILD_MENU_3_A,
+            GRANDCHILD_MENU_3_B,
+        CHILD_DB_MENU_4,
+            // no children
+        CHILD_DB_MENU_5,
+            GRANDCHILD_MENU_DB_5,   // generic for all
+        CHILD_DB_MENU_6,
+            // no children
+        NUM_MENUS
 };
 
 
-static const uint8_t menuMainChildren[] = {
-    MAIN_MENU_CHILD_1,
-    MAIN_MENU_CHILD_2,
-    MAIN_MENU_CHILD_3
+static const uint8_t numMainChildren = 6;
+static const uint8_t menuMainChildren[numMainChildren] = {
+    CHILD_MENU_1,
+    CHILD_MENU_2,
+    CHILD_MENU_3,
+    CHILD_DB_MENU_4,
+    CHILD_DB_MENU_5,
+    CHILD_DB_MENU_6,
 };
 
 
-static const MZ_MenuDefinitionT TextMenuDef[NUM_MENUS] = {
+static const uint8_t numMenu3Children = 2;
+static const uint8_t menu3children[numMenu3Children] = {
+    GRANDCHILD_MENU_3_A,
+    GRANDCHILD_MENU_3_B
+};
+
+
+static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [MAIN_MENU] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .typeTxt = {
-            .numChildren = 3,
+            .numChildren = numMainChildren,
             .children = menuMainChildren,
         },
     },
-    [MAIN_MENU_CHILD_1] = {
+    [CHILD_MENU_1] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
         .typeTxt = {
-            .numChildren = 18,     // not implemented, for testing UP10 / DOWN10
+            .numChildren = 13, // not implemented, for testing UP10 / DOWN10
         },
     },
-    [MAIN_MENU_CHILD_2] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
-        .parent = MAIN_MENU,
-        .typeTxt = {
-            .numChildren = 8,
-            .children = menuMainChildren,
-        },
-    },
-    [MAIN_MENU_CHILD_3] = {
+    [CHILD_MENU_2] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
         .typeTxt = {
             .numChildren = 0,
         },
     },
-};
-
-
-enum {
-    DB_MAIN_MENU = 0,
-    MAIN_MENU_CHILD_DB1,
-    MAIN_MENU_CHILD_DB2,
-    MAIN_MENU_CHILD_DB3,
-    GENERIC_DB_CHILD_TABLE_MENU,
-    NUM_DB_MENUS
-};
-
-
-static const uint8_t dbMenuMainChildren[] = {
-    MAIN_MENU_CHILD_DB1,
-    MAIN_MENU_CHILD_DB2,
-    MAIN_MENU_CHILD_DB3,
-};
-
-
-static const MZ_MenuDefinitionT DbaseMenuDef[NUM_DB_MENUS] = {
-    [DB_MAIN_MENU] = {
+    [CHILD_MENU_3] = {
         .menuType = MZ_MENU_TYPE_TEXT,
+        .parent = MAIN_MENU,
         .typeTxt = {
-            .numChildren = 3,
-            .children = dbMenuMainChildren,
-        }
+            .numChildren = 2,
+            .children = menu3children,
+        },
     },
-    [MAIN_MENU_CHILD_DB1] = {
+    [CHILD_DB_MENU_4] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .parent = DB_MAIN_MENU,
+        .parent = MAIN_MENU,
         .typeDb = {
             .dbTableId = 5,
-            .dbChildMenu = GENERIC_DB_CHILD_TABLE_MENU,
         },
     },
-    [MAIN_MENU_CHILD_DB2] = {
+    [CHILD_DB_MENU_5] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .parent = DB_MAIN_MENU,
+        .parent = MAIN_MENU,
         .typeDb = {
             .dbTableId = 7,
-            .dbChildMenu = GENERIC_DB_CHILD_TABLE_MENU,
+            .dbChildMenu = GRANDCHILD_MENU_DB_5,
         },
     },
-    [MAIN_MENU_CHILD_DB3] = {
+    [CHILD_DB_MENU_6] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .parent = DB_MAIN_MENU,
+        .parent = MAIN_MENU,
         .typeDb = {
             .dbTableId = 20,
         },
     },
-    [GENERIC_DB_CHILD_TABLE_MENU] = {
+    [GRANDCHILD_MENU_3_A] = {
+        .menuType = MZ_MENU_TYPE_TEXT,
+        .parent = CHILD_MENU_3,
+    },
+    [GRANDCHILD_MENU_3_B] = {
+        .menuType = MZ_MENU_TYPE_TEXT,
+        .parent = CHILD_MENU_3,
+    },
+    [GRANDCHILD_MENU_DB_5] = {
         .menuType = MZ_MENU_TYPE_DBASE_CHILD,
-        .parent = MAIN_MENU_CHILD_DB1,
+        .parent = CHILD_DB_MENU_5,
     },
 };
 

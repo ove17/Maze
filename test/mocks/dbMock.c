@@ -72,7 +72,9 @@ bool DB_deleteRecord(const uint8_t tableId,
                      const uint8_t recordId) {
     LastAccessedTableId = tableId;
     NumRecords--;
-    RecordThatCannotBeDeleted--;    // only valid if recordId < RecordThatCannotBeDeleted
+    if (recordId < RecordThatCannotBeDeleted) {
+        RecordThatCannotBeDeleted--;
+    }
     return true;
 }
 
