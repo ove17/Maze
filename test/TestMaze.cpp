@@ -10,14 +10,36 @@ extern "C" {
 
 
 /*
- * TODO: make sure DbChild access works just like Db access
- *      prolly needs getTableId() that automatically switches between them
+ * TODO:
  *
  * General:
  *  - finish implementing children of dbMenus
+ *      make sure DbChild access works just like Db access
+ *      prolly needs getTableId() that automatically switches between them
+ *
+ *  - extra dbase table properties in Maze: (e.g. for settings:)
+ *      - insertDeleteChangeRecordAllowed // type
+ *      - editRecordFieldsAllowed // other than type
+ *
+ * - HIDDEN (log) menus:
+ *      hidden must be user defined in a text (non-dbase) menu:
+ *          in parent: hasHiddenChild
+ *          in child:  isHidden (is really not necessary, but helps when
+ *                      jumping back to parent)
+ *      hidden child is be the last(defined) child
+ *      keyCombo only works on the last visible child
+ *      keyCombo can be generic, because whether it is actually used
+ *          depends on menu hasHiddenChild
+ *      after pressing keyCombo Maze goes straight to the hidden menu
+ *      the hidden menu behaves normally and can be any type and have children
+ *  - QUESTION: how to handle expert/normal mode?
+ *          so value of db field determines expert/normal : (in)visible?
+ *           exp/normal mode must be persistent!
+ *
+ *  - make sure cursor position works everywhere (NOT GENERIC!)
+ *
  *  - implement setting custom MenuDefinitions/Actions/States
- *  - implement invisible/hidden menuItems with magic keystrokes
- *      ENTER on db item without children could go to child menu?
+ *      cursor pos must also be custom
  *
  * Update comments in Maze.h
  * Improve README.md
@@ -412,7 +434,7 @@ TEST(DbaseMenuEditing,
      MINUS10_decreasesDbaseValueBy10) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_MINUS10);
-    BYTES_EQUAL(2, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(2, DB_MOCK_getValue(5, 0, 0));
 }
 
 
@@ -420,7 +442,7 @@ TEST(DbaseMenuEditing,
      PLUS10_increasesDbaseValueBy10) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_PLUS10);
-    BYTES_EQUAL(22, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(22, DB_MOCK_getValue(5, 0, 0));
 }
 
 
@@ -446,7 +468,7 @@ TEST(DbaseMenuEditing,
      MINUS1_decreasesDbaseValueBy1) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_MINUS1);
-    BYTES_EQUAL(11, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(11, DB_MOCK_getValue(5, 0, 0));
 }
 
 
@@ -454,7 +476,7 @@ TEST(DbaseMenuEditing,
      PLUS1_increasesDbaseValueBy1) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_PLUS1);
-    BYTES_EQUAL(13, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(13, DB_MOCK_getValue(5, 0, 0));
 }
 
 
@@ -1084,7 +1106,7 @@ TEST(DbaseChangeRecordTypeState,
      PLUS1_increasesRecordTypeBy1) {
     DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_PLUS1);
-    BYTES_EQUAL(11, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(11, DB_MOCK_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
     BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
     BYTES_EQUAL(MZ_ACTION_INCREASE_VALUE_BY_1, action);
@@ -1095,7 +1117,7 @@ TEST(DbaseChangeRecordTypeState,
      MINUS1_increasesRecordTypeBy1) {
     DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_MINUS1);
-    BYTES_EQUAL(9, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(9, DB_MOCK_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
     BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
     BYTES_EQUAL(MZ_ACTION_DECREASE_VALUE_BY_1, action);
@@ -1106,7 +1128,7 @@ TEST(DbaseChangeRecordTypeState,
      PLUS10_increasesRecordTypeBy10) {
     DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_PLUS10);
-    BYTES_EQUAL(20, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(20, DB_MOCK_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
     BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
     BYTES_EQUAL(MZ_ACTION_INCREASE_VALUE_BY_10, action);
@@ -1117,7 +1139,7 @@ TEST(DbaseChangeRecordTypeState,
      MINUS1_increasesRecordTypeBy10) {
     DB_MOCK_setValue(10);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_MINUS10);
-    BYTES_EQUAL(0, DB_getValue(5, 0, 0));
+    BYTES_EQUAL(0, DB_MOCK_getValue(5, 0, 0));
     BYTES_EQUAL(0, MZ_getRecordColumn());
     BYTES_EQUAL(MZ_STATE_DBASE_CHANGE_RECORD_TYPE, MZ_getMenuState());
     BYTES_EQUAL(MZ_ACTION_DECREASE_VALUE_BY_10, action);
@@ -1160,7 +1182,8 @@ TEST(TextMenuOld,
 
 TEST(TextMenuOld,
      whenEnteringAChildMenu_cursorIsAt2_0) {
-    MZ_gotoMenuItem(MAIN_MENU, 2);
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_navigateMaze(MZ_NAV_DOWN);
     MZ_navigateMaze(MZ_NAV_ENTER);
     BYTES_EQUAL(2, MZ_getCursorRow());
     BYTES_EQUAL(0, MZ_getCursorColumn());
@@ -1177,7 +1200,7 @@ TEST(TextMenuOld,
 
 TEST(TextMenuOld,
      UP_onMenuItem0inChildMenu_sendsCursorTo0_0) {
-    MZ_gotoMenuItem(CHILD_MENU_1, 0);
+    goToChildMenuItem(1, 0);
     MZ_navigateMaze(MZ_NAV_UP);
     BYTES_EQUAL(0, MZ_getCursorRow());
     BYTES_EQUAL(0, MZ_getCursorColumn());

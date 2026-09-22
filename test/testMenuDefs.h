@@ -108,7 +108,6 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
 static const MZ_DbaseFunctionsT DbaseFunctions = {
     .getNumRecords = DB_getNumRecords,
     .getNumColumns = DB_getNumColumns,
-    .getValue = DB_getValue,
     .changeValue = DB_changeValue,
     .insertRecordAfter = DB_insertRecordAfter,
     .canRecordBeAdded = DB_canRecordBeAdded,

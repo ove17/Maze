@@ -45,11 +45,17 @@
 //          NOTE: x is different for different languages!
 //          SO: editing must be automatic! with (DB_)getCursorXfor(columnId) oid
 
+/*
+ * Standard menu definitions are private to Maze.c.
+ * Applications may define their own menu types, states and actions
+ * using the types provided here.
+ */
 
 #ifndef MAZE_H
 #define MAZE_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define MZ_MENU_ITEM_IS_HEADER 0xFF
 
@@ -183,14 +189,15 @@ typedef struct {
 /*
  * The caller must set an instance of this struct, filled with database access
  *  functions.
+ *
+ * The database implementation must guarantee:
+ *   getNumRecords(tableId) >= 1
+ *   getNumColumns(tableId, recordId) >= 1
  */
 typedef struct {
     uint8_t (*getNumRecords)(uint8_t tableId);
     uint8_t (*getNumColumns)(uint8_t tableId,
                              uint8_t recordId);
-    uint32_t (*getValue)(uint8_t tableId,
-                         uint8_t recordId,
-                         uint8_t columnId);
     bool (*changeValue)(uint8_t tableId,
                         uint8_t recordId,
                         uint8_t columnId,
@@ -221,13 +228,6 @@ void MZ_init(const MZ_MenuDefinitionT * mazeDef,
  *                      if the column is already at is maximum value.
  */
 MZ_menuActionT MZ_navigateMaze(const MZ_navT nav);
-
-
-/*
- * Jumps to item in menu
- */
-void MZ_gotoMenuItem(const uint8_t menuId,
-                     const uint8_t menuItem);
 
 
 /*

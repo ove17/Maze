@@ -29,14 +29,6 @@ uint8_t DB_getNumColumns(const uint8_t tableId,
 }
 
 
-uint32_t DB_getValue(const uint8_t tableId,
-                     const uint8_t recordId,
-                     const uint8_t columnId) {
-    LastAccessedTableId = tableId;
-    return Value;
-}
-
-
 bool DB_changeValue(const uint8_t tableId,
                     const uint8_t recordId,
                     const uint8_t columnId,
@@ -166,4 +158,13 @@ void DB_MOCK_setChildTableId(const uint8_t tableId,
 
 uint8_t DB_MOCK_getLastAccessedTableId(void) {
     return LastAccessedTableId;
+}
+
+
+// TODO: remove recordId and columnId if not used
+uint32_t DB_MOCK_getValue(const uint8_t tableId,
+                          const uint8_t recordId,
+                          const uint8_t columnId) {
+    LastAccessedTableId = tableId;
+    return Value;
 }

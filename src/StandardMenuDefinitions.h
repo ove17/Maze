@@ -1,5 +1,12 @@
 // StandardMenuDefinitions.h
 
+/*
+ * Standard definitions used internally by Maze.
+ * User-defined menu types/states/actions may be added independently
+ * without modifying this file.
+ */
+
+
 #ifndef STANDARD_MENU_DEFINITIONS_H
 #define STANDARD_MENU_DEFINITIONS_H
 
