@@ -38,6 +38,12 @@
  *
  * MenuItem starts at 0 for the 1st menu item (txt and db)
  *
+ * Maze supports hidden menus:
+ *      An MZ_MENU_TYPE_TEXT can have its last menu item hidden. This menu item
+ *      cannot be made visible, but can be entered using MZ_MENU_TYPE_TEXT when
+ *      the cursor is on the penultimate (i.e. the last visible) menu item.
+ * A hidden menu behaves normally and can be any type and can have children.
+ *
  */
 
 //  header = static and may have cursor-pos-defined functions
@@ -77,6 +83,7 @@ typedef enum {
     MZ_NAV_END,
     MZ_NAV_HOME,
     MZ_NAV_MODIFY,  // shift-enter
+    MZ_NAV_ENTER_HIDDEN,    // some secret key combo
     MZ_NAV_COUNT,
     MZ_NAV_PLUS1 = MZ_NAV_UP,
     MZ_NAV_MINUS1 = MZ_NAV_DOWN,
@@ -118,6 +125,7 @@ enum {
     MZ_ACTION_GOTO_DELETE_RECORD,
     MZ_ACTION_INSERT_RECORD,
     MZ_ACTION_DELETE_RECORD,
+    MZ_ACTION_GO_TO_HIDDEN_MENU,
     MZ_ACTION_COUNT
 };
 
@@ -169,17 +177,20 @@ typedef struct {
     //    exitFunction_t entryFunction; OR exitAction?
     const uint8_t parent;
     const MZ_menuTypeT menuType;
+    const bool editRecordFieldsDisabled;
+    const bool insertDeleteRecordsDisabled;
     union {
         struct {
             const uint8_t numChildren;
             const uint8_t * children;
+            const bool lastChildIsHidden;
         } typeTxt;
         struct {
             const uint8_t dbTableId;
             const uint8_t dbChildMenu;
         } typeDb;
         struct {
-            uint8_t noProperties;
+            const bool noProperties;
         } typeDbChild;
     };
 } MZ_MenuDefinitionT;

@@ -84,7 +84,8 @@ bool DB_isRecordTypeVariable(const uint8_t tableId) {
 }
 
 
-uint8_t DB_getChildTableId(const uint8_t tableId) {
+uint8_t DB_getChildTableId(const uint8_t tableId,
+                           const uint8_t recordId) {
     LastAccessedTableId = tableId;
     return ChildTableId;
 }
@@ -150,6 +151,7 @@ void DB_MOCK_setRecordTypeToVariable(void) {
 void DB_MOCK_setChildTableId(const uint8_t tableId,
                              const uint8_t recordId) {
     ChildTableId = tableId;
+    LastAccessedTableId = 0xFF;
 }
 
 

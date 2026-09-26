@@ -3,38 +3,47 @@
 
 enum {
     MAIN_MENU = 0,
-        CHILD_MENU_1,
+        TXT_MENU_1,
             // 13 children (dummy)
-        CHILD_MENU_2,
-            // 0 children
-        CHILD_MENU_3,
-            GRANDCHILD_MENU_3_A,
-            GRANDCHILD_MENU_3_B,
-        CHILD_DB_MENU_4,
+        TXT_MENU_2,
+            DB_MENU_2A,
+            DB_MENU_2B,
+            TXT_MENU_2C, // hidden!
+        TXT_MENU_3,
+            TXT_MENU_3A,
+            TXT_MENU_3B,
+        DB_MENU_4,
             // no children
-        CHILD_DB_MENU_5,
-            GRANDCHILD_MENU_DB_5,   // generic for all
-        CHILD_DB_MENU_6,
-            // no children
+        DB_MENU_5,
+            DB_MENU_5X,   // generic for all
+        DB_MENU_6,
         NUM_MENUS
 };
 
 
 static const uint8_t numMainChildren = 6;
 static const uint8_t menuMainChildren[numMainChildren] = {
-    CHILD_MENU_1,
-    CHILD_MENU_2,
-    CHILD_MENU_3,
-    CHILD_DB_MENU_4,
-    CHILD_DB_MENU_5,
-    CHILD_DB_MENU_6,
+    TXT_MENU_1,
+    TXT_MENU_2,
+    TXT_MENU_3,
+    DB_MENU_4,
+    DB_MENU_5,
+    DB_MENU_6,
+};
+
+
+static const uint8_t numMenu2Children = 3;
+static const uint8_t menu2children[numMenu2Children] = {
+    DB_MENU_2A,
+    DB_MENU_2B,
+    TXT_MENU_2C
 };
 
 
 static const uint8_t numMenu3Children = 2;
 static const uint8_t menu3children[numMenu3Children] = {
-    GRANDCHILD_MENU_3_A,
-    GRANDCHILD_MENU_3_B
+    TXT_MENU_3A,
+    TXT_MENU_3B
 };
 
 
@@ -46,21 +55,23 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
             .children = menuMainChildren,
         },
     },
-    [CHILD_MENU_1] = {
+    [TXT_MENU_1] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
         .typeTxt = {
-            .numChildren = 13, // not implemented, for testing UP10 / DOWN10
+            .numChildren = 13,
         },
     },
-    [CHILD_MENU_2] = {
+    [TXT_MENU_2] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
         .typeTxt = {
-            .numChildren = 0,
+            .numChildren = 3,
+            .children = menu2children,
+            .lastChildIsHidden = true,
         },
     },
-    [CHILD_MENU_3] = {
+    [TXT_MENU_3] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
         .typeTxt = {
@@ -68,39 +79,59 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
             .children = menu3children,
         },
     },
-    [CHILD_DB_MENU_4] = {
+    [DB_MENU_4] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = MAIN_MENU,
         .typeDb = {
             .dbTableId = 5,
         },
     },
-    [CHILD_DB_MENU_5] = {
+    [DB_MENU_5] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = MAIN_MENU,
         .typeDb = {
             .dbTableId = 7,
-            .dbChildMenu = GRANDCHILD_MENU_DB_5,
+            .dbChildMenu = DB_MENU_5X,
         },
     },
-    [CHILD_DB_MENU_6] = {
+    [DB_MENU_6] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = MAIN_MENU,
         .typeDb = {
             .dbTableId = 20,
         },
     },
-    [GRANDCHILD_MENU_3_A] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
-        .parent = CHILD_MENU_3,
+    [DB_MENU_2A] = {
+        .menuType = MZ_MENU_TYPE_DBASE,
+        .parent = MAIN_MENU,
+        .editRecordFieldsDisabled = true,
+        .typeDb = {
+            .dbTableId = 18,
+        },
     },
-    [GRANDCHILD_MENU_3_B] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
-        .parent = CHILD_MENU_3,
+    [DB_MENU_2B] = {
+        .menuType = MZ_MENU_TYPE_DBASE,
+        .parent = MAIN_MENU,
+        .insertDeleteRecordsDisabled = true,
+        .typeDb = {
+            .dbTableId = 21,
+        },
     },
-    [GRANDCHILD_MENU_DB_5] = {
+    [TXT_MENU_2C] = {
+        .menuType = MZ_MENU_TYPE_TEXT,
+        .parent = TXT_MENU_2,
+    },
+    [TXT_MENU_3A] = {
+        .menuType = MZ_MENU_TYPE_TEXT,
+        .parent = TXT_MENU_3,
+    },
+    [TXT_MENU_3B] = {
+        .menuType = MZ_MENU_TYPE_TEXT,
+        .parent = TXT_MENU_3,
+    },
+    [DB_MENU_5X] = {
         .menuType = MZ_MENU_TYPE_DBASE_CHILD,
-        .parent = CHILD_DB_MENU_5,
+        .parent = DB_MENU_5,
     },
 };
 
