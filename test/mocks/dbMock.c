@@ -12,6 +12,7 @@ static uint16_t MinValue = 0;
 static uint8_t RecordThatCannotBeDeleted = 0xFF;
 static bool RecordTypeIsVariable = false;
 static uint8_t ChildTableId = 0xFF;
+static uint8_t * ColumnXpositions;
 
 static uint8_t LastAccessedTableId = 0xFF;
 
@@ -22,8 +23,8 @@ uint8_t DB_getNumRecords(const uint8_t tableId) {
 }
 
 
-uint8_t DB_getNumColumns(const uint8_t tableId,
-                         const uint8_t recordId) {
+uint8_t DB_getNumColumnsInFormat(const uint8_t tableId,
+                                 const uint8_t recordId) {
     LastAccessedTableId = tableId;
     return NumColumns;
 }
@@ -91,6 +92,13 @@ uint8_t DB_getChildTableId(const uint8_t tableId,
 }
 
 
+uint8_t DB_getColumnX(const uint8_t tableId,
+                      const uint8_t columnId) {
+    LastAccessedTableId = tableId;
+    return ColumnXpositions[columnId];
+}
+
+
 // for setting test values:
 
 
@@ -118,8 +126,10 @@ void DB_MOCK_setMaxNumRecords(const uint8_t maxNumRecords) {
     MaxNumRecords = maxNumRecords;
 }
 
-void DB_MOCK_setNumColumns(const uint8_t numColumns) {
+void DB_MOCK_setColumns(const uint8_t numColumns,
+                        uint8_t * columnXpositions) {
     NumColumns = numColumns;
+    ColumnXpositions = columnXpositions;
 }
 
 

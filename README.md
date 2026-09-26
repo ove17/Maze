@@ -16,7 +16,7 @@ MZ_menuActionT MZ_navigateMaze(nav);
 
 This function will execute the required action and return its actionId or MZ_ACTION_NONE if no action took place.
 All built-in actions are executed and may result in changing MenuId, MenuItem or MenuState. 
-The caller may provide custom actions and menuTypes, in that case MZ_navigateMaze(nav) will only return the resulting action and the caller will have to execute code if necessary with that action.
+The caller may provide custom actions and menuTypes, in that case MZ_navigateMaze(nav) will only return the resulting action and the caller will have to execute code if necessary for that action.
 I.e. Maze cannot accept or execute callback functions for custom menuTypes.
 
 In order to make the database functionality of Maze work with an external dbase, the caller has to provide a set of functions that execute dbase code:

@@ -110,7 +110,7 @@ static void setDefaultMenuState() {
 static bool increaseColumnBy(const uint8_t delta) {
     const uint8_t initialValue = RecordColumn;
     const uint8_t tableId = getTableId();
-    const uint8_t max = DbFuncs->getNumColumns(tableId, MenuItem) - 1;
+    const uint8_t max = DbFuncs->getNumColumnsInFormat(tableId, MenuItem) - 1;
     if (RecordColumn + delta < max) {
         RecordColumn += delta;
     } else {
@@ -201,6 +201,7 @@ static bool trySetMenuStateToChangeRecordType(void) {
 }
 
 
+//TODO cursor
 static bool tryGoToEditRecord(void) {
     assert(MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE_CHILD
             || MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE);
@@ -448,5 +449,10 @@ uint8_t MZ_getCursorRow(void) {
 
 
 uint8_t MZ_getCursorColumn(void) {
-    return CURSOR_COL_BROWSING;
+    if (MenuState == MZ_STATE_DBASE_EDITING) {
+        const uint8_t tableId = getTableId();
+        return DbFuncs->getColumnX(tableId, RecordColumn);
+    } else {
+        return CURSOR_COL_BROWSING;
+    }
 }

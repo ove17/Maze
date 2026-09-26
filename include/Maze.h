@@ -207,7 +207,7 @@ typedef struct {
  */
 typedef struct {
     uint8_t (*getNumRecords)(uint8_t tableId);
-    uint8_t (*getNumColumns)(uint8_t tableId,
+    uint8_t (*getNumColumnsInFormat)(uint8_t tableId,
                              uint8_t recordId);
     bool (*changeValue)(uint8_t tableId,
                         uint8_t recordId,
@@ -223,6 +223,8 @@ typedef struct {
     bool (*isRecordTypeVariable)(uint8_t tableId);
     uint8_t (*getChildTableId)(uint8_t tableId,
                                uint8_t recordId);
+    uint8_t (*getColumnX)(uint8_t tableId,
+                          uint8_t columnId);
 } MZ_DbaseFunctionsT;
 
 

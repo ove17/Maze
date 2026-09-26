@@ -11,9 +11,20 @@ extern "C" {
 
 /*
  * TODO:
+ *  - implement setting custom MenuDefinitions/Actions/States
+ *      cursor pos must also be custom
  *
- * General:
+ * QUESTION:
+ *  - how does custom cursor position work?
+ *      just like db edit?
+ *          NO: positions are fixed!
+ *          define in (custom) menuDef?
+ *      every STATUS is a MZ_STATE
+ *          so still multiple positions per state!
+ *          also vertical (browsing) positions
  *
+ * Update comments in Maze.h
+ * Improve README.md
  *
  *  - QUESTION: how to handle expert/normal mode?
  *          so value of db field determines expert/normal : (in)visible?
@@ -26,20 +37,15 @@ extern "C" {
  *      BUT:
  *          getNumRecords is a db function
  *          maxValue is set in the dbDef
+ *      SO, FOR NOW:
+ *          don't implement - it will hardly impact user-friendliness (?)
  *
- *  - make sure cursor position works everywhere (NOT GENERIC!)
- *
- *  - implement setting custom MenuDefinitions/Actions/States
- *      cursor pos must also be custom
- *
- * Update comments in Maze.h
- * Improve README.md
  */
 
 
 // NOTE: 1st menuItem has id 0
 static void goToMenuItem(const uint8_t menuItemId,
-                              const uint8_t childItemId) {
+                         const uint8_t childItemId) {
     for (uint8_t i = 0; i < menuItemId; i++) {
         MZ_navigateMaze(MZ_NAV_DOWN);
     }
@@ -223,6 +229,53 @@ TEST(TextMenu,
 }
 
 
+/*
+ *  cursor position defined as line_char (i.e. y_x)
+ */
+
+
+TEST(TextMenu,
+     initially_cursorIsAt2_0) {
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
+TEST(TextMenu,
+     whileScrolling_cursorIsAt2_0) {
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
+TEST(TextMenu,
+     whenEnteringAChildMenu_cursorIsAt2_0) {
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
+TEST(TextMenu,
+     UP_onMenuItem0inTopMenu_leavesCursorAt2_0) {
+    MZ_navigateMaze(MZ_NAV_UP);
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
+TEST(TextMenu,
+     UP_onMenuItem0inChildMenu_sendsCursorTo0_0) {
+    goToMenuItem(1, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    BYTES_EQUAL(0, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
 // end MZ_STATE_STD_SCROLLING
 
 
@@ -349,6 +402,45 @@ TEST(DbaseMenuScrolling,
 }
 
 
+/*
+ *  cursor position defined as line_char (i.e. y_x)
+ */
+
+
+TEST(DbaseMenuScrolling,
+     whenEnteringAChildMenu_cursorIsAt2_0) {
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(DB_MENU_2A, MZ_getMenuId());
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
+TEST(DbaseMenuScrolling,
+     UP_onMenuItem0inChildMenu_sendsCursorTo0_0) {
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_UP);
+    BYTES_EQUAL(0, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
+TEST(DbaseMenuScrolling,
+     UPthenEnter_onMenuItem0inChildMenu_sendsCursorTo2_0) {
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
 // end MZ_STATE_DBASE_SCROLLING
 
 
@@ -417,8 +509,6 @@ TEST_GROUP(DbaseMenuEditing) {
 
 
 /* MZ_STATE_DBASE_EDITING :
- *
- * editRecord TODO: cursor position
  */
 
 
@@ -481,7 +571,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      END_onFirstColumn_goesToLastColumn) {
-    DB_MOCK_setNumColumns(8);
+    DB_MOCK_setColumns(8, NULL);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(7, MZ_getRecordColumn());
 }
@@ -489,7 +579,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      HOME_on8thColumn_GoesToFirstColumn_andRemainsInEditingState) {
-    DB_MOCK_setNumColumns(8);
+    DB_MOCK_setColumns(8, NULL);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(7, MZ_getRecordColumn());
     MZ_navigateMaze(MZ_NAV_HOME);
@@ -500,7 +590,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      HOME_on12thColumn_GoesTo2ndColumn) {
-    DB_MOCK_setNumColumns(12);
+    DB_MOCK_setColumns(12, NULL);
     MZ_navigateMaze(MZ_NAV_END);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(11, MZ_getRecordColumn());
@@ -526,7 +616,7 @@ TEST(DbaseMenuEditing,
 
 TEST(DbaseMenuEditing,
      RIGHT_onLastColumn_staysOnLastColumn) {
-    DB_MOCK_setNumColumns(4);
+    DB_MOCK_setColumns(4, NULL);
     MZ_navigateMaze(MZ_NAV_END);
     BYTES_EQUAL(3, MZ_getRecordColumn());
     MZ_navigateMaze(MZ_NAV_RIGHT);
@@ -551,6 +641,46 @@ TEST(DbaseMenuEditing,
     MZ_navigateMaze(MZ_NAV_LEFT);
     BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
 }
+
+
+/*
+ */
+
+
+TEST(DbaseMenuEditing,
+     enteringEditState_setsCursorX_to1stXposition) {
+    uint8_t columnXpositions[] = {2, 4, 7, 12};
+    DB_MOCK_setColumns(4, columnXpositions);
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(2, MZ_getCursorColumn());
+}
+
+
+TEST(DbaseMenuEditing,
+     RIGHT_inEditState_setsCursorX_to2ndXposition) {
+    uint8_t columnXpositions[] = {2, 4, 7, 12};
+    DB_MOCK_setColumns(4, columnXpositions);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(4, MZ_getCursorColumn());
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(7, MZ_getCursorColumn());
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(12, MZ_getCursorColumn());
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(12, MZ_getCursorColumn());
+}
+
+
+TEST(DbaseMenuEditing,
+     leavingEditState_setsCursorTo2_0) {
+    uint8_t columnXpositions[] = {2, 4, 7, 12};
+    DB_MOCK_setColumns(4, columnXpositions);
+    BYTES_EQUAL(2, MZ_getCursorColumn());
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(2, MZ_getCursorRow());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
 
 
 // end MZ_STATE_DBASE_EDITING
@@ -666,7 +796,7 @@ TEST(DbaseMenuEditingWithVarRecordType,
 
 TEST(DbaseMenuEditingWithVarRecordType,
      HOME_onColumn7_goesToColumn1) {
-    DB_MOCK_setNumColumns(7);
+    DB_MOCK_setColumns(7, NULL);
     MZ_navigateMaze(MZ_NAV_END);
     MZ_navigateMaze(MZ_NAV_HOME);
     BYTES_EQUAL(1, MZ_getRecordColumn());
@@ -1336,65 +1466,3 @@ TEST(DbaseMenuProperties,
     BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
     BYTES_EQUAL(MZ_ACTION_NONE, action);
 }
-
-
-
-/*
- * TODO: cursor movement
- *
- */
-
-
-TEST_GROUP(TextMenuOld) {
-    void setup() {
-        MZ_init(MenuDef, NULL);
-    }
-
-    void teardown() {
-    }
-};
-
-
-TEST(TextMenuOld,
-     initiallyCursorIsAt2_0) {
-    BYTES_EQUAL(2, MZ_getCursorRow());
-    BYTES_EQUAL(0, MZ_getCursorColumn());
-}
-
-
-TEST(TextMenuOld,
-     whileScrolling_cursorIsAt2_0) {
-    MZ_navigateMaze(MZ_NAV_DOWN);
-    BYTES_EQUAL(2, MZ_getCursorRow());
-    BYTES_EQUAL(0, MZ_getCursorColumn());
-}
-
-
-TEST(TextMenuOld,
-     whenEnteringAChildMenu_cursorIsAt2_0) {
-    MZ_navigateMaze(MZ_NAV_DOWN);
-    MZ_navigateMaze(MZ_NAV_DOWN);
-    MZ_navigateMaze(MZ_NAV_ENTER);
-    BYTES_EQUAL(2, MZ_getCursorRow());
-    BYTES_EQUAL(0, MZ_getCursorColumn());
-}
-
-
-TEST(TextMenuOld,
-     UP_onMenuItem0inTopMenu_leavesCursorAt2_0) {
-    MZ_navigateMaze(MZ_NAV_UP);
-    BYTES_EQUAL(2, MZ_getCursorRow());
-    BYTES_EQUAL(0, MZ_getCursorColumn());
-}
-
-
-TEST(TextMenuOld,
-     UP_onMenuItem0inChildMenu_sendsCursorTo0_0) {
-    goToMenuItem(1, 0);
-    MZ_navigateMaze(MZ_NAV_UP);
-    BYTES_EQUAL(0, MZ_getCursorRow());
-    BYTES_EQUAL(0, MZ_getCursorColumn());
-}
-
-
-// end TextMenuOld

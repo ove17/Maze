@@ -9,8 +9,6 @@
 // these functions exist in BDB:
 
 uint8_t DB_getNumRecords(const uint8_t tableId);
-uint8_t DB_getNumColumns(const uint8_t tableId,
-                         const uint8_t recordId);
 bool DB_changeValue(const uint8_t tableId,
                     const uint8_t recordId,
                     const uint8_t columnId,
@@ -28,6 +26,10 @@ bool DB_deleteRecord(const uint8_t tableId,
 bool DB_isRecordTypeVariable(const uint8_t tableId);
 uint8_t DB_getChildTableId(const uint8_t tableId,
                            const uint8_t recordId);
+uint8_t DB_getNumColumnsInFormat(const uint8_t tableId,
+                                 const uint8_t recordId);
+uint8_t DB_getColumnX(const uint8_t tableId,
+                      const uint8_t columnId);
 
 
 // the following functions are only for setting test values:
@@ -35,7 +37,8 @@ uint8_t DB_getChildTableId(const uint8_t tableId,
 void DB_MOCK_init(void);
 void DB_MOCK_setNumRecords(const uint8_t numRecords);
 void DB_MOCK_setMaxNumRecords(const uint8_t maxNumRecords);
-void DB_MOCK_setNumColumns(const uint8_t numColumns);
+void DB_MOCK_setColumns(const uint8_t numColumns,
+                        uint8_t * columnXpositions);
 void DB_MOCK_setValue(const uint32_t value);
 void DB_MOCK_setMaxValue(const uint16_t maxValue);
 void DB_MOCK_setMinValue(const uint16_t minValue);
