@@ -58,6 +58,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [TXT_MENU_1] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
+        .numHeaderPositions = 3,
         .typeTxt = {
             .numChildren = 13,
         },
@@ -97,6 +98,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [DB_MENU_6] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = MAIN_MENU,
+        .numHeaderPositions = 3,
         .typeDb = {
             .dbTableId = 20,
         },

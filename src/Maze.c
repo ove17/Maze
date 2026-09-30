@@ -1,4 +1,5 @@
 // Maze.c
+// FIXME: is confusion possible between record column & cursor column?
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -18,7 +19,7 @@ static const MZ_DbaseFunctionsT * DbFuncs = NULL;
 
 static uint8_t MenuId = TOP_MENU;
 static uint8_t MenuItem = 0;
-static uint8_t RecordColumn = 0xFF;
+static uint8_t RecordColumn = 0;
 static MZ_menuStateT MenuState = MZ_STATE_STD_SCROLLING;
 static uint8_t ChildTableId = 0xFF;
 
@@ -30,7 +31,7 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
     MenuId = TOP_MENU;
     MenuItem = 0;
     MenuState = MZ_STATE_STD_SCROLLING;
-    RecordColumn = 0xFF;
+    RecordColumn = 0;
 }
 
 
@@ -104,6 +105,30 @@ static bool increaseMenuItemBy(const uint8_t delta) {
 static void setDefaultMenuState() {
     MZ_menuTypeT menuType = MenuDefs[MenuId].menuType;
     MenuState = MenuTypeDefs[menuType].defaultState;
+}
+
+
+static bool tryGoToNextHeaderPosition(void) {
+    if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
+        if (MenuDefs[MenuId].numHeaderPositions > 0
+                && RecordColumn < MenuDefs[MenuId].numHeaderPositions) {
+            RecordColumn++;
+            return true;
+        }
+    }
+    return false;
+}
+
+
+static bool tryGoToPreviousHeaderPosition(void) {
+    if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
+        if (MenuDefs[MenuId].numHeaderPositions > 0
+                && RecordColumn > 0) {
+            RecordColumn--;
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -201,7 +226,6 @@ static bool trySetMenuStateToChangeRecordType(void) {
 }
 
 
-//TODO cursor
 static bool tryGoToEditRecord(void) {
     assert(MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE_CHILD
             || MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE);
@@ -212,7 +236,6 @@ static bool tryGoToEditRecord(void) {
     RecordColumn = getFirstRecordColumn();
     return true;
 }
-
 
 
 // NOTE: does not work for MZ_MENU_TYPE_DBASE_CHILD
@@ -286,6 +309,17 @@ static bool tryGoToHiddenMenu(void) {
 }
 
 
+static bool tryGoToChangeOrInsertRecord(void) {
+    if (MenuDefs[MenuId].insertDeleteRecordsDisabled) {
+        return false;
+    }
+    if (!trySetMenuStateToChangeRecordType()) {
+        goToInsertRecordState();
+    }
+    return true;
+}
+
+
 /*
  * MZ_navigateMaze(nav) executes the action AND its returnvalue
  *  contains the actionId
@@ -294,6 +328,7 @@ static bool tryGoToHiddenMenu(void) {
  */
 MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
     const uint8_t action = menuActions[MenuState][nav];
+    bool success = true;
     switch (action) {
         case MZ_ACTION_GO_TO_MENU :
             if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
@@ -303,81 +338,62 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
             }
             break;
         case MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD :
-            if (!increaseMenuItemBy(1)) {
-                return MZ_ACTION_NONE;
-            }
+            success = increaseMenuItemBy(1);
             break;
         case MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD :
-            if (!increaseMenuItemBy(10)) {
-                return MZ_ACTION_NONE;
-            }
+            success = increaseMenuItemBy(10);
             break;
         case MZ_ACTION_SCROLL_1_MENU_ITEM_BACK :
-            if (!decreaseMenuItemBy(1)) {
-                return MZ_ACTION_NONE;
-            }
+            success = decreaseMenuItemBy(1);
             break;
         case MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK :
-            if (!decreaseMenuItemBy(10)) {
-                return MZ_ACTION_NONE;
-            }
+            success = decreaseMenuItemBy(10);
+            break;
+        case MZ_ACTION_GO_TO_PREVIOUS_HEADER_POSITION :
+            success = tryGoToPreviousHeaderPosition();
+            break;
+        case MZ_ACTION_GO_TO_NEXT_HEADER_POSITION :
+            success = tryGoToNextHeaderPosition();
             break;
         case MZ_ACTION_GO_TO_MENU_FROM_DB :
-            if (!goToMenuFromDb()) {
-                return MZ_ACTION_NONE;
-            }
+            success = goToMenuFromDb();
             break;
-        case MZ_ACTION_ENTER_EDIT_RECORD :
-            if (!tryGoToEditRecord()) {
-                return MZ_ACTION_NONE;
+        case MZ_ACTION_GO_TO_EDIT_RECORD_OR_NEXT_HEADER_POSITION :
+            if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
+                success = tryGoToNextHeaderPosition();
+            } else {
+                success = tryGoToEditRecord();
             }
             break;
         case MZ_ACTION_GO_1_COLUMN_FORWARD :
-            if (!increaseColumnBy(1)) {
-                return MZ_ACTION_NONE;
-            }
+            success = increaseColumnBy(1);
             break;
         case MZ_ACTION_GO_1_COLUMN_BACK :
-            if (!decreaseColumnBy(1)) {
-                return MZ_ACTION_NONE;
-            }
+            success = decreaseColumnBy(1);
             break;
         case MZ_ACTION_GO_10_COLUMNS_FORWARD :
-            if (!increaseColumnBy(10)) {
-                return MZ_ACTION_NONE;
-            }
+            success = increaseColumnBy(10);
             break;
         case MZ_ACTION_GO_10_COLUMNS_BACK :
-            if (!decreaseColumnBy(10)) {
-                return MZ_ACTION_NONE;
-            }
+            success = decreaseColumnBy(10);
             break;
         case MZ_ACTION_INCREASE_VALUE_BY_1 :
-            if (!changeValueBy(1)) {
-                return MZ_ACTION_NONE;
-            }
+            success = changeValueBy(1);
             break;
         case MZ_ACTION_DECREASE_VALUE_BY_1 :
-            if (!changeValueBy(-1)) {
-                return MZ_ACTION_NONE;
-            }
+            success = changeValueBy(-1);
             break;
         case MZ_ACTION_INCREASE_VALUE_BY_10 :
-            if (!changeValueBy(10)) {
-                return MZ_ACTION_NONE;
-            }
+            success = changeValueBy(10);
             break;
         case MZ_ACTION_DECREASE_VALUE_BY_10 :
-            if (!changeValueBy(-10)) {
-                return MZ_ACTION_NONE;
-            }
+            success = changeValueBy(-10);
             break;
-        case MZ_ACTION_MANAGE_RECORDS :
-            if (MenuDefs[MenuId].insertDeleteRecordsDisabled) {
-                return MZ_ACTION_NONE;
-            }
-            if (!trySetMenuStateToChangeRecordType()) {
-                goToInsertRecordState();
+        case MZ_ACTION_GO_TO_MANAGE_RECORDS_OR_PREVIOUS_HEADER_POSITION :
+            if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
+                success = tryGoToPreviousHeaderPosition();
+            } else {
+                success = tryGoToChangeOrInsertRecord();
             }
             break;
         case MZ_ACTION_LEAVE_MANAGE_RECORDS :
@@ -385,7 +401,6 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
             break;
         case MZ_ACTION_GOTO_CHANGE_RECORD_TYPE :
             MenuState = MZ_STATE_DBASE_CHANGE_RECORD_TYPE;
-            RecordColumn = 0; // recordType is always 1st column
             break;
         case MZ_ACTION_LEAVE_INSERT_RECORD :
             if (!trySetMenuStateToChangeRecordType()) {
@@ -407,15 +422,14 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
             goToDeleteRecordState();
             break;
         case MZ_ACTION_GO_TO_HIDDEN_MENU :
-            if (!tryGoToHiddenMenu()) {
-                return MZ_ACTION_NONE;
-            }
+            success = tryGoToHiddenMenu();
             break;
         case MZ_ACTION_NONE :
         default :
             break; // only return action value, no code execution!
     }
-    return action;
+    return success ? action : MZ_ACTION_NONE;
+
 }
 
 
@@ -452,6 +466,8 @@ uint8_t MZ_getCursorColumn(void) {
     if (MenuState == MZ_STATE_DBASE_EDITING) {
         const uint8_t tableId = getTableId();
         return DbFuncs->getColumnX(tableId, RecordColumn);
+    } else if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
+        return RecordColumn;
     } else {
         return CURSOR_COL_BROWSING;
     }

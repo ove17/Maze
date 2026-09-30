@@ -107,8 +107,11 @@ enum {
     MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
     MZ_ACTION_SCROLL_1_MENU_ITEM_BACK,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
+    MZ_ACTION_GO_TO_NEXT_HEADER_POSITION,
+    MZ_ACTION_GO_TO_PREVIOUS_HEADER_POSITION,
     MZ_ACTION_GO_TO_MENU_FROM_DB,
-    MZ_ACTION_ENTER_EDIT_RECORD,
+    MZ_ACTION_GO_TO_EDIT_RECORD_OR_NEXT_HEADER_POSITION,
+    MZ_ACTION_GO_TO_MANAGE_RECORDS_OR_PREVIOUS_HEADER_POSITION,
     MZ_ACTION_GO_1_COLUMN_FORWARD,
     MZ_ACTION_GO_1_COLUMN_BACK,
     MZ_ACTION_GO_10_COLUMNS_FORWARD,
@@ -117,7 +120,6 @@ enum {
     MZ_ACTION_DECREASE_VALUE_BY_1,
     MZ_ACTION_INCREASE_VALUE_BY_10,
     MZ_ACTION_DECREASE_VALUE_BY_10,
-    MZ_ACTION_MANAGE_RECORDS,
     MZ_ACTION_LEAVE_MANAGE_RECORDS,
     MZ_ACTION_GOTO_CHANGE_RECORD_TYPE,
     MZ_ACTION_LEAVE_INSERT_RECORD,
@@ -177,6 +179,8 @@ typedef struct {
     //    exitFunction_t entryFunction; OR exitAction?
     const uint8_t parent;
     const MZ_menuTypeT menuType;
+    const uint8_t numHeaderPositions;   // in addition to back/home
+                                        // cannot be used in Main Menu!
     const bool editRecordFieldsDisabled;
     const bool insertDeleteRecordsDisabled;
     union {

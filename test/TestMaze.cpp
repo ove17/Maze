@@ -11,8 +11,24 @@ extern "C" {
 
 /*
  * TODO:
+ *
  *  - implement setting custom MenuDefinitions/Actions/States
  *      cursor pos must also be custom
+ *
+ * customActionIsReturned
+ * customKeyReturnsBoundCustomAction
+ * customState...
+ * customMenuType...
+ * menuCanHaveStandardAndCustomKeysMixed
+ * menuCanHaveStandardAndCustomActionsMixed
+ *
+ *
+ * is this custom? :
+ *  - menu can have functions tied to ENTER on location x,y ?
+ *      maybe only the action is custom ?
+ *      or the caller only gets ACTION_ENTER back and must determine
+ *          its own action ?
+ *
  *
  * QUESTION:
  *  - how does custom cursor position work?
@@ -66,7 +82,8 @@ TEST_GROUP(TextMenu) {
 };
 
 
-// MZ_STATE_STD_SCROLLING :
+/* MZ_STATE_STD_SCROLLING :
+ */
 
 
 TEST(TextMenu,
@@ -1450,7 +1467,7 @@ TEST(DbaseMenuProperties,
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_RIGHT);
     BYTES_EQUAL(DB_MENU_2A, MZ_getMenuId());
     BYTES_EQUAL(1, MZ_getMenuItem());
-    BYTES_EQUAL(0xFF, MZ_getRecordColumn());
+    BYTES_EQUAL(0, MZ_getRecordColumn());
     BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
     BYTES_EQUAL(MZ_ACTION_NONE, action);
 }
@@ -1466,3 +1483,161 @@ TEST(DbaseMenuProperties,
     BYTES_EQUAL(MZ_STATE_DBASE_SCROLLING, MZ_getMenuState());
     BYTES_EQUAL(MZ_ACTION_NONE, action);
 }
+
+
+// end DbaseMenuProperties
+
+
+TEST_GROUP(MenuHeaders) {
+    void setup() {
+        DB_MOCK_init();
+        MZ_init(MenuDef, &DbaseFunctions);
+    }
+
+    void teardown() {
+    }
+};
+
+
+/* TODO:
+ */
+
+
+TEST(MenuHeaders,
+     RIGHT_onTxtHeaderHomeWithPositions_goesToFirstPosition) {
+    goToMenuItem(0, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(TXT_MENU_1, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(1, MZ_getCursorColumn());
+}
+
+
+TEST(MenuHeaders,
+     RIGHT_onDbHeaderHomeWithoutPositions_doesNothingAndReturnsACTION_NONE) {
+    goToMenuItem(3, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(DB_MENU_4, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(MenuHeaders,
+     RIGHT_onDbHeaderHomeWithPositions_goesToFirstPosition) {
+    goToMenuItem(5, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(DB_MENU_6, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(1, MZ_getCursorColumn());
+}
+
+
+TEST(MenuHeaders,
+     RIGHT_onTxtHeaderHomeWithoutPositions_doesNothingAndReturnsACTION_NONE) {
+    goToMenuItem(1, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(TXT_MENU_2, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(MenuHeaders,
+     LEFT_onTxtHeaderHomeWithoutPositions_doesNothingAndReturnsACTION_NONE) {
+    goToMenuItem(1, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(TXT_MENU_2, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(MenuHeaders,
+     RIGHT_onFirstPositionInHeader_goesToSecondPosition) {
+    goToMenuItem(0, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(2, MZ_getCursorColumn());
+}
+
+
+TEST(MenuHeaders,
+     RIGHT_onLastPositionInHeader_doesNothingAndReturnsACTION_NONE) {
+    goToMenuItem(0, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    BYTES_EQUAL(3, MZ_getCursorColumn());
+}
+
+
+TEST(MenuHeaders,
+     LEFT_onFirstPositionInHeader_goesToHomePosition) {
+    goToMenuItem(0, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+}
+
+
+TEST(MenuHeaders,
+     LEFT_onLastPositionInHeader_goesToPenultimatePosition) {
+    goToMenuItem(0, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(2, MZ_getCursorColumn());
+}
+
+
+TEST(MenuHeaders,
+     LEFT_onTxtHeaderHomeWithPositions_doesNothingAndReturnsACTION_NONE) {
+    goToMenuItem(0, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(TXT_MENU_1, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(MenuHeaders,
+     LEFT_onDbHeaderHomeWithPositions_doesNothingAndReturnsACTION_NONE) {
+    goToMenuItem(5, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(DB_MENU_6, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(MenuHeaders,
+     LEFT_onDbHeaderHomeWithoutPositions_doesNothingAndReturnsACTION_NONE) {
+    goToMenuItem(3, 0);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_LEFT);
+    BYTES_EQUAL(DB_MENU_4, MZ_getMenuId());
+    BYTES_EQUAL(MZ_MENU_ITEM_IS_HEADER, MZ_getMenuItem());
+    BYTES_EQUAL(0, MZ_getCursorColumn());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+/* end MenuHeaders
+ */
