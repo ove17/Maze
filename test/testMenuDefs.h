@@ -21,6 +21,16 @@ enum {
 };
 
 
+enum {
+    TEST_ACTION_A = MZ_ACTION_COUNT,
+    TEST_ACTION_B,
+    TEST_ACTION_C,
+    TEST_ACTION_D,
+    TEST_ACTION_E,
+    TEST_ACTION_F,
+};
+
+
 static const uint8_t numMainChildren = 6;
 static const uint8_t menuMainChildren[numMainChildren] = {
     TXT_MENU_1,
@@ -47,6 +57,22 @@ static const uint8_t menu3children[numMenu3Children] = {
 };
 
 
+static const uint8_t numMenu1HeaderActions = 3;
+static const MZ_headerActionT menu1HeaderActions[numMenu1HeaderActions] = {
+    {.action = TEST_ACTION_A, .cursorPos = 2},
+    {.action = TEST_ACTION_B, .cursorPos = 4},
+    {.action = TEST_ACTION_C, .cursorPos = 6},
+};
+
+
+static const uint8_t numMenu6HeaderActions = 3;
+static const MZ_headerActionT menu6HeaderActions[numMenu6HeaderActions] = {
+    {.action = TEST_ACTION_D, .cursorPos = 3},
+    {.action = TEST_ACTION_E, .cursorPos = 5},
+    {.action = TEST_ACTION_F, .cursorPos = 7},
+};
+
+
 static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [MAIN_MENU] = {
         .menuType = MZ_MENU_TYPE_TEXT,
@@ -58,7 +84,8 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [TXT_MENU_1] = {
         .menuType = MZ_MENU_TYPE_TEXT,
         .parent = MAIN_MENU,
-        .numHeaderPositions = 3,
+        .numHeaderActions = numMenu1HeaderActions,
+        .headerActions = menu1HeaderActions,
         .typeTxt = {
             .numChildren = 13,
         },
@@ -98,7 +125,8 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [DB_MENU_6] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = MAIN_MENU,
-        .numHeaderPositions = 3,
+        .numHeaderActions = numMenu6HeaderActions,
+        .headerActions = menu6HeaderActions,
         .typeDb = {
             .dbTableId = 20,
         },

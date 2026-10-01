@@ -11,6 +11,7 @@
 #define TOP_MENU 0
 #define NO_MENU 0xFF
 #define CURSOR_ROW_HEADER 0
+#define CURSOR_COL_HEADER_HOME 0
 #define CURSOR_ROW_BROWSING 2
 #define CURSOR_COL_BROWSING 0
 
@@ -19,7 +20,7 @@ static const MZ_DbaseFunctionsT * DbFuncs = NULL;
 
 static uint8_t MenuId = TOP_MENU;
 static uint8_t MenuItem = 0;
-static uint8_t RecordColumn = 0;
+static uint8_t ColumnIndex = 0;
 static MZ_menuStateT MenuState = MZ_STATE_STD_SCROLLING;
 static uint8_t ChildTableId = 0xFF;
 
@@ -31,7 +32,7 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
     MenuId = TOP_MENU;
     MenuItem = 0;
     MenuState = MZ_STATE_STD_SCROLLING;
-    RecordColumn = 0;
+    ColumnIndex = 0;
 }
 
 
@@ -110,9 +111,9 @@ static void setDefaultMenuState() {
 
 static bool tryGoToNextHeaderPosition(void) {
     if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
-        if (MenuDefs[MenuId].numHeaderPositions > 0
-                && RecordColumn < MenuDefs[MenuId].numHeaderPositions) {
-            RecordColumn++;
+        if (MenuDefs[MenuId].numHeaderActions > 0
+                && ColumnIndex < MenuDefs[MenuId].numHeaderActions) {
+            ColumnIndex++;
             return true;
         }
     }
@@ -122,9 +123,9 @@ static bool tryGoToNextHeaderPosition(void) {
 
 static bool tryGoToPreviousHeaderPosition(void) {
     if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
-        if (MenuDefs[MenuId].numHeaderPositions > 0
-                && RecordColumn > 0) {
-            RecordColumn--;
+        if (MenuDefs[MenuId].numHeaderActions > 0
+                && ColumnIndex > 0) {
+            ColumnIndex--;
             return true;
         }
     }
@@ -133,20 +134,20 @@ static bool tryGoToPreviousHeaderPosition(void) {
 
 
 static bool increaseColumnBy(const uint8_t delta) {
-    const uint8_t initialValue = RecordColumn;
+    const uint8_t initialValue = ColumnIndex;
     const uint8_t tableId = getTableId();
     const uint8_t max = DbFuncs->getNumColumnsInFormat(tableId, MenuItem) - 1;
-    if (RecordColumn + delta < max) {
-        RecordColumn += delta;
+    if (ColumnIndex + delta < max) {
+        ColumnIndex += delta;
     } else {
-        RecordColumn = max;
+        ColumnIndex = max;
     }
-    return RecordColumn != initialValue;
+    return ColumnIndex != initialValue;
 }
 
 
 // recordType is always 1st column, but must be skipped
-static uint8_t getFirstRecordColumn(void) {
+static uint8_t getFirstColumnIndex(void) {
     const uint8_t tableId = getTableId();
     if (DbFuncs->isRecordTypeVariable(tableId)) {
         return 1;
@@ -157,25 +158,25 @@ static uint8_t getFirstRecordColumn(void) {
 
 
 static bool decreaseColumnBy(const uint8_t delta) {
-    const uint8_t initialValue = RecordColumn;
-    const uint8_t firstColumnId = getFirstRecordColumn();
-    if (RecordColumn == firstColumnId) {
+    const uint8_t initialValue = ColumnIndex;
+    const uint8_t firstColumnId = getFirstColumnIndex();
+    if (ColumnIndex == firstColumnId) {
         MenuState = MZ_STATE_DBASE_SCROLLING;
-        RecordColumn = 0;
+        ColumnIndex = 0;
     } else
-    if (RecordColumn > delta) {
-        RecordColumn -= delta;
+    if (ColumnIndex > delta) {
+        ColumnIndex -= delta;
     } else {
-        RecordColumn = firstColumnId;
+        ColumnIndex = firstColumnId;
     }
-    return RecordColumn != initialValue;
+    return ColumnIndex != initialValue;
 }
 
 
 // NOTE: changeValue() must keep limit to min/max values
 static bool changeValueBy(const int8_t delta) {
     const uint8_t tableId = getTableId();
-    return DbFuncs->changeValue(tableId, MenuItem, RecordColumn, delta);
+    return DbFuncs->changeValue(tableId, MenuItem, ColumnIndex, delta);
 }
 
 
@@ -233,7 +234,7 @@ static bool tryGoToEditRecord(void) {
         return false;
     }
     MenuState = MZ_STATE_DBASE_EDITING;
-    RecordColumn = getFirstRecordColumn();
+    ColumnIndex = getFirstColumnIndex();
     return true;
 }
 
@@ -267,29 +268,39 @@ static void goToChildMenu(void) {
 }
 
 
-/* Go to a menu from a DB or DB child menu.
- * NOTE: parent data must be stored as DB children are not explicitly defined
- *  in the menuDef
+static void goToDbParentMenu(void) {
+    MenuId = MenuDefs[MenuId].parent;
+}
+
+
+static void goToDbChildMenu(void) {
+    ChildTableId = getChildTableId();
+    assert(ChildTableId != NO_MENU);
+    MenuId = MenuDefs[MenuId].typeDb.dbChildMenu;
+    MenuItem = 0;
+}
+
+
+/*
+ * NOTE: parent data is stored for DB children, as ther parents are not
+ *          explicitly defined in the menuDef
  */
-static bool goToMenuFromDb(void) {
+static bool goToMenu(void) {
     static uint8_t parentMenuItem = 0;
     if (MenuItem == MZ_MENU_ITEM_IS_HEADER) { // to parent
-        if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
-            goToParentMenu();
-        } else { // so .menuType == MZ_MENU_TYPE_DBASE_CHILD
-            MenuId = MenuDefs[MenuId].parent;
+        if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE_CHILD) {
             MenuItem = parentMenuItem;
+            goToDbParentMenu();
+        } else {
+            goToParentMenu();
         }
-    } else { // to DB child
+    } else { // to child
         if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
-            ChildTableId = getChildTableId();
-            if (ChildTableId != NO_MENU) {
-                parentMenuItem = MenuItem;
-                MenuId = MenuDefs[MenuId].typeDb.dbChildMenu;
-                MenuItem = 0;
-            } else {
-                return false; // DB table without children
-            }
+            parentMenuItem = MenuItem;
+            goToDbChildMenu();
+        } else
+        if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_TEXT) {
+            goToChildMenu();
         } else {
             return false; // DB child must not have children
         }
@@ -320,6 +331,12 @@ static bool tryGoToChangeOrInsertRecord(void) {
 }
 
 
+static uint8_t getActionFromColumnIndex(void) {
+    assert(ColumnIndex <= MenuDefs[MenuId].numHeaderActions);
+    return  MenuDefs[MenuId].headerActions[ColumnIndex - 1].action;
+}
+
+
 /*
  * MZ_navigateMaze(nav) executes the action AND its returnvalue
  *  contains the actionId
@@ -327,15 +344,14 @@ static bool tryGoToChangeOrInsertRecord(void) {
  * CUSTOM functions only return actionId, there is no code execution
  */
 MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
-    const uint8_t action = menuActions[MenuState][nav];
+    uint8_t action = menuActions[MenuState][nav];
     bool success = true;
     switch (action) {
-        case MZ_ACTION_GO_TO_MENU :
-            if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
-                goToParentMenu();
-            } else {
-                goToChildMenu();
+        case MZ_ACTION_GO_TO_MENU_OR_EXECUTE :
+            if (ColumnIndex > 0) { // in the header, but not on back/home
+                return getActionFromColumnIndex();
             }
+            success = goToMenu();
             break;
         case MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD :
             success = increaseMenuItemBy(1);
@@ -354,9 +370,6 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
             break;
         case MZ_ACTION_GO_TO_NEXT_HEADER_POSITION :
             success = tryGoToNextHeaderPosition();
-            break;
-        case MZ_ACTION_GO_TO_MENU_FROM_DB :
-            success = goToMenuFromDb();
             break;
         case MZ_ACTION_GO_TO_EDIT_RECORD_OR_NEXT_HEADER_POSITION :
             if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
@@ -448,8 +461,8 @@ MZ_menuStateT MZ_getMenuState(void) {
 }
 
 
-uint8_t MZ_getRecordColumn(void) {
-    return RecordColumn;
+uint8_t MZ_getColumnIndex(void) {
+    return ColumnIndex;
 }
 
 
@@ -462,12 +475,18 @@ uint8_t MZ_getCursorRow(void) {
 }
 
 
+/* NOTE: ColumnIndex is offset by 1, because ==0 is the back/home position
+ */
 uint8_t MZ_getCursorColumn(void) {
     if (MenuState == MZ_STATE_DBASE_EDITING) {
         const uint8_t tableId = getTableId();
-        return DbFuncs->getColumnX(tableId, RecordColumn);
+        return DbFuncs->getColumnX(tableId, ColumnIndex);
     } else if (MenuItem == MZ_MENU_ITEM_IS_HEADER) {
-        return RecordColumn;
+        if (ColumnIndex > 0) {
+            assert(ColumnIndex <= MenuDefs[MenuId].numHeaderActions);
+            return  MenuDefs[MenuId].headerActions[ColumnIndex - 1].cursorPos;
+        }
+        return CURSOR_COL_HEADER_HOME;
     } else {
         return CURSOR_COL_BROWSING;
     }

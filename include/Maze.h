@@ -102,14 +102,13 @@ typedef enum {
 typedef uint8_t MZ_menuActionT;
 enum {
     MZ_ACTION_NONE,
-    MZ_ACTION_GO_TO_MENU,
+    MZ_ACTION_GO_TO_MENU_OR_EXECUTE,
     MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
     MZ_ACTION_SCROLL_1_MENU_ITEM_BACK,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
     MZ_ACTION_GO_TO_NEXT_HEADER_POSITION,
     MZ_ACTION_GO_TO_PREVIOUS_HEADER_POSITION,
-    MZ_ACTION_GO_TO_MENU_FROM_DB,
     MZ_ACTION_GO_TO_EDIT_RECORD_OR_NEXT_HEADER_POSITION,
     MZ_ACTION_GO_TO_MANAGE_RECORDS_OR_PREVIOUS_HEADER_POSITION,
     MZ_ACTION_GO_1_COLUMN_FORWARD,
@@ -171,16 +170,27 @@ typedef struct {
 } MZ_menuTypeDefT;
 
 
+typedef struct {
+    uint8_t action;
+    uint8_t cursorPos;
+} MZ_headerActionT;
+
 /*
  * Definition of a menu :
+ *
+ * NOTE:
+ *  numHeaderPositions can NOT be used in the Main Menu (by design), because it
+ *   does not have a back/home location to access them from.
+ *  Defining numHeaderPositions in the main menu will not lead to errors, they
+ *   will simply not be accessible.
  */
 typedef struct {
     //    entryFunction_t entryFunction; OR entryAction?
     //    exitFunction_t entryFunction; OR exitAction?
     const uint8_t parent;
     const MZ_menuTypeT menuType;
-    const uint8_t numHeaderPositions;   // in addition to back/home
-                                        // cannot be used in Main Menu!
+    const uint8_t numHeaderActions;   // in addition to back/home
+    const MZ_headerActionT * headerActions;
     const bool editRecordFieldsDisabled;
     const bool insertDeleteRecordsDisabled;
     union {
@@ -269,7 +279,7 @@ MZ_menuStateT MZ_getMenuState(void);
 /*
  * Returns the index of the current column/field
  */
-uint8_t MZ_getRecordColumn(void);
+uint8_t MZ_getColumnIndex(void);
 
 
 /*
