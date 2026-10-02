@@ -130,7 +130,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         .menuType = MZ_MENU_TYPE_NAV,
         .parent = MAIN_MENU,
         .typeNav = {
-            .numItems = 3,
+            .numItems = numMenu2Children,
             .children = menu2children,
             .lastChildIsHidden = true,
         },
@@ -139,7 +139,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         .menuType = MZ_MENU_TYPE_NAV,
         .parent = MAIN_MENU,
         .typeNav = {
-            .numItems = 2,
+            .numItems = numMenu3Children,
             .children = menu3children,
         },
     },
@@ -187,7 +187,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     },
     [DB_MENU_2A] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .parent = MAIN_MENU,
+        .parent = NAV_MENU_2,
         .editRecordFieldsDisabled = true,
         .typeDb = {
             .dbTableId = 18,
@@ -195,7 +195,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     },
     [DB_MENU_2B] = {
         .menuType = MZ_MENU_TYPE_DBASE,
-        .parent = MAIN_MENU,
+        .parent = NAV_MENU_2,
         .insertDeleteRecordsDisabled = true,
         .typeDb = {
             .dbTableId = 21,

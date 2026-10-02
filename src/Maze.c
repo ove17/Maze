@@ -37,7 +37,7 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
 
 
 static uint8_t getTableId(void) {
-    const uint8_t menuType =  MenuDefs[MenuId].menuType;
+    const MZ_menuTypeT menuType =  MenuDefs[MenuId].menuType;
     if (menuType == MZ_MENU_TYPE_DBASE) {
         return MenuDefs[MenuId].typeDb.dbTableId;
     } else if (menuType == MZ_MENU_TYPE_DBASE_CHILD) {
@@ -238,18 +238,20 @@ static bool tryGoToEditRecord(void) {
 static uint8_t getChildItemIdOfParent(void) {
     MZ_MenuDefinitionT menuCurrent = MenuDefs[MenuId];
     MZ_MenuDefinitionT menuParent = MenuDefs[menuCurrent.parent];
-    uint8_t i = 0;
-    while (menuParent.typeNav.children[i] != MenuId) {
-        i++;
+    for (uint8_t i = 0; i < menuParent.typeNav.numItems; i++) {
+        if (menuParent.typeNav.children[i] == MenuId) {
+            return i;
+        }
     }
-    return i;
+    assert (0 && "child menu id not found");
 }
 
 
 static void goToParentMenu(void) {
     MenuItem = getChildItemIdOfParent();
     MenuId = MenuDefs[MenuId].parent;
-    if (MenuDefs[MenuId].typeNav.lastChildIsHidden) {
+    if (MenuDefs[MenuId].typeNav.lastChildIsHidden
+            && MenuItem == MenuDefs[MenuId].typeNav.numItems - 1) {
         MenuItem--; // go to penultimate item, as the last is hidden
     }
     setDefaultMenuState();
@@ -332,9 +334,21 @@ static bool tryGoToChangeOrInsertRecord(void) {
 }
 
 
-static uint8_t getActionFromColumnIndex(void) {
+static MZ_menuActionT getActionFromColumnIndex(void) {
     assert(ColumnIndex <= MenuDefs[MenuId].numHeaderActions);
     return  MenuDefs[MenuId].headerActions[ColumnIndex - 1].action;
+}
+
+
+static MZ_menuActionT getAction(MZ_navT nav) {
+    if (MenuDefs[MenuId].numNavActions > 0) {
+        for (uint8_t i = 0; i < MenuDefs[MenuId].numNavActions; i++) {
+            if (MenuDefs[MenuId].navActions[i].nav == nav) {
+                return MenuDefs[MenuId].navActions[i].action;
+            }
+        }
+    }
+    return menuActions[MenuState][nav];
 }
 
 
@@ -345,20 +359,7 @@ static uint8_t getActionFromColumnIndex(void) {
  * CUSTOM functions only return actionId, there is no code execution
  */
 MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
-
-    uint8_t action = MZ_ACTION_NONE;
-    if (MenuDefs[MenuId].numNavActions > 0) {
-        for (uint8_t i = 0; i < MenuDefs[MenuId].numNavActions; i++) {
-            if (MenuDefs[MenuId].navActions[i].nav == nav) {
-                action = MenuDefs[MenuId].navActions[i].action;
-                break;
-            }
-        }
-    }
-    if (action == MZ_ACTION_NONE) {
-        action = menuActions[MenuState][nav];
-    }
-
+    const MZ_menuActionT action = getAction(nav);
     bool success = true;
     switch (action) {
         case MZ_ACTION_GO_TO_MENU_OR_EXECUTE :
@@ -490,7 +491,7 @@ uint8_t MZ_getCursorRow(void) {
 }
 
 
-/* NOTE: ColumnIndex is offset by 1, because ==0 is the back/home position
+/* NOTE: ColumnIndex is offset by 1, because 0 is the back/home position
  */
 uint8_t MZ_getCursorColumn(void) {
     if (MenuState == MZ_STATE_DBASE_EDITING) {

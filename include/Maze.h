@@ -132,27 +132,22 @@ enum {
 
 
 /*
- * menuTypes define the behaviour of generic menus. There are only a few
- *  predefined menuTypes, but additional ones can be defined separately, so do
- *  not edit this enum.
+ * menuTypes define the behaviour of generic menus.
  */
-typedef uint8_t MZ_menuTypeT;
-enum {
+typedef enum {
     MZ_MENU_TYPE_NAV,
     MZ_MENU_TYPE_DBASE,
     MZ_MENU_TYPE_DBASE_CHILD,
     MZ_MENU_TYPE_SELECT,
     MZ_MENU_TYPE_COUNT
-};
+} MZ_menuTypeT;
 
 
 /*
  * A menu can be in different states, where the basic menuDefinition remains
  *  the same, but the menuActions change.
- * Custom menuStates may be defined separately, do not edit this enum.
  */
-typedef uint8_t MZ_menuStateT;
-enum {
+typedef enum {
     MZ_STATE_STD_SCROLLING,
     MZ_STATE_DBASE_SCROLLING,
     MZ_STATE_DBASE_EDITING,
@@ -163,7 +158,7 @@ enum {
     MZ_STATE_DBASE_DELETE_RECORD,
     MZ_STATE_DBASE_CANNOT_DELETE_RECORD,
     MZ_STATE_COUNT
-};
+} MZ_menuStateT;
 
 
 typedef struct {

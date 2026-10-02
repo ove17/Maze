@@ -10,11 +10,18 @@ extern "C" {
 
 
 /*
- * TODO: *
+ * TODO:
  *      consider splitting up into multiple test files with menuDefs
+ *          DO BOTH: small for individual features
+ *                  big for combinations
  *
  *      dataManagement submenu import:
  *          MZ_MENU_TYPE_SELECT with confirmationNav == ENTER
+ *          where does the list come from?
+ *          large array in RAM?
+ *          so the select menu must receive a ptr to this list + numItems
+ *          the ptr may be static, but it contents may be regenerated as
+ *              required
  *
  *  All definitions that do not need extending should get their own type and
  *      should be moved from (public) Maze.h to (private) StandardMenuDefs.hj
@@ -453,13 +460,18 @@ TEST(DbaseMenuScrolling,
 }
 
 
+// FIXME: hidden needs better testing - independently
+//      and going to parent menus : check correct MenuItem value
 TEST(DbaseMenuScrolling,
      UPthenEnter_onMenuItem0inChildMenu_sendsCursorTo2_0) {
     MZ_navigateMaze(MZ_NAV_DOWN);
     MZ_navigateMaze(MZ_NAV_ENTER);
     MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(DB_MENU_2A, MZ_getMenuId());
     MZ_navigateMaze(MZ_NAV_UP);
     MZ_navigateMaze(MZ_NAV_ENTER);
+    BYTES_EQUAL(NAV_MENU_2, MZ_getMenuId());
+    BYTES_EQUAL(0, MZ_getMenuItem());
     BYTES_EQUAL(2, MZ_getCursorRow());
     BYTES_EQUAL(0, MZ_getCursorColumn());
 }
