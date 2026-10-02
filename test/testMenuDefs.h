@@ -3,15 +3,17 @@
 
 enum {
     MAIN_MENU = 0,
-        TXT_MENU_1,
-            // 13 children (dummy)
-        TXT_MENU_2,
+        NAV_MENU_1,
+            NAV_MENU_1A,
+            NAV_MENU_1B,
+//            SELECT_MENU_1C,
+        NAV_MENU_2,
             DB_MENU_2A,
             DB_MENU_2B,
-            TXT_MENU_2C, // hidden!
-        TXT_MENU_3,
-            TXT_MENU_3A,
-            TXT_MENU_3B,
+            NAV_MENU_2C, // hidden!
+        NAV_MENU_3,
+            NAV_MENU_3A,
+            NAV_MENU_3B,
         DB_MENU_4,
             // no children
         DB_MENU_5,
@@ -21,6 +23,14 @@ enum {
 };
 
 
+// custom navigation keys:
+enum {
+    TEST_NAV_CUSTOM_A = MZ_NAV_COUNT,
+    TEST_NAV_CUSTOM_B,
+};
+
+
+// custom actions:
 enum {
     TEST_ACTION_A = MZ_ACTION_COUNT,
     TEST_ACTION_B,
@@ -28,17 +38,28 @@ enum {
     TEST_ACTION_D,
     TEST_ACTION_E,
     TEST_ACTION_F,
+    TEST_ACTION_CONFIRM,
+    TEST_ACTION_CUSTOM_A,
+    TEST_ACTION_CUSTOM_B,
+    TEST_ACTION_CUSTOM_C,
 };
 
 
 static const uint8_t numMainChildren = 6;
 static const uint8_t menuMainChildren[numMainChildren] = {
-    TXT_MENU_1,
-    TXT_MENU_2,
-    TXT_MENU_3,
+    NAV_MENU_1,
+    NAV_MENU_2,
+    NAV_MENU_3,
     DB_MENU_4,
     DB_MENU_5,
     DB_MENU_6,
+};
+
+
+static const uint8_t numMenu1Children = 2;
+static const uint8_t menu1children[numMenu1Children] = {
+    NAV_MENU_1A,
+    NAV_MENU_1B,
 };
 
 
@@ -46,14 +67,20 @@ static const uint8_t numMenu2Children = 3;
 static const uint8_t menu2children[numMenu2Children] = {
     DB_MENU_2A,
     DB_MENU_2B,
-    TXT_MENU_2C
+    NAV_MENU_2C
 };
 
 
 static const uint8_t numMenu3Children = 2;
 static const uint8_t menu3children[numMenu3Children] = {
-    TXT_MENU_3A,
-    TXT_MENU_3B
+    NAV_MENU_3A,
+    NAV_MENU_3B
+};
+
+
+static const uint8_t numMenu1AheaderActions = 1;
+static const MZ_headerActionT menu1AheaderActions[numMenu1AheaderActions] = {
+    {.action = TEST_ACTION_CONFIRM, .cursorPos = 2},
 };
 
 
@@ -73,37 +100,46 @@ static const MZ_headerActionT menu6HeaderActions[numMenu6HeaderActions] = {
 };
 
 
+static const uint8_t numMenu1BnavActions = 3;
+static const MZ_navActionT menu1BnavActions[numMenu1BnavActions] = {
+    {.nav = TEST_NAV_CUSTOM_A, .action = TEST_ACTION_CUSTOM_A},
+    {.nav = TEST_NAV_CUSTOM_B, .action = TEST_ACTION_CUSTOM_B},
+    {.nav = MZ_NAV_DOWN, .action = TEST_ACTION_CUSTOM_C},
+};
+
+
 static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [MAIN_MENU] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
-        .typeTxt = {
-            .numChildren = numMainChildren,
+        .menuType = MZ_MENU_TYPE_NAV,
+        .typeNav = {
+            .numItems = numMainChildren,
             .children = menuMainChildren,
         },
     },
-    [TXT_MENU_1] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
+    [NAV_MENU_1] = {
+        .menuType = MZ_MENU_TYPE_NAV,
         .parent = MAIN_MENU,
         .numHeaderActions = numMenu1HeaderActions,
         .headerActions = menu1HeaderActions,
-        .typeTxt = {
-            .numChildren = 13,
+        .typeNav = {
+            .numItems = 13, // bogus number for testing 10+/-
+            .children = menu1children,
         },
     },
-    [TXT_MENU_2] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
+    [NAV_MENU_2] = {
+        .menuType = MZ_MENU_TYPE_NAV,
         .parent = MAIN_MENU,
-        .typeTxt = {
-            .numChildren = 3,
+        .typeNav = {
+            .numItems = 3,
             .children = menu2children,
             .lastChildIsHidden = true,
         },
     },
-    [TXT_MENU_3] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
+    [NAV_MENU_3] = {
+        .menuType = MZ_MENU_TYPE_NAV,
         .parent = MAIN_MENU,
-        .typeTxt = {
-            .numChildren = 2,
+        .typeNav = {
+            .numItems = 2,
             .children = menu3children,
         },
     },
@@ -131,6 +167,24 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
             .dbTableId = 20,
         },
     },
+    [NAV_MENU_1A] = {
+        .menuType = MZ_MENU_TYPE_NAV,
+        .parent = NAV_MENU_1,
+        .numHeaderActions = numMenu1AheaderActions,
+        .headerActions = menu1AheaderActions,
+        .typeNav = {
+            .numItems = 2, // NO CHILDREN!
+        },
+    },
+    [NAV_MENU_1B] = {
+        .menuType = MZ_MENU_TYPE_NAV,
+        .parent = NAV_MENU_1,
+        .numNavActions = numMenu1BnavActions,
+        .navActions = menu1BnavActions,
+        .typeNav = {
+            .numItems = 2, // NO CHILDREN!
+        },
+    },
     [DB_MENU_2A] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = MAIN_MENU,
@@ -147,17 +201,17 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
             .dbTableId = 21,
         },
     },
-    [TXT_MENU_2C] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
-        .parent = TXT_MENU_2,
+    [NAV_MENU_2C] = {
+        .menuType = MZ_MENU_TYPE_NAV,
+        .parent = NAV_MENU_2,
     },
-    [TXT_MENU_3A] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
-        .parent = TXT_MENU_3,
+    [NAV_MENU_3A] = {
+        .menuType = MZ_MENU_TYPE_NAV,
+        .parent = NAV_MENU_3,
     },
-    [TXT_MENU_3B] = {
-        .menuType = MZ_MENU_TYPE_TEXT,
-        .parent = TXT_MENU_3,
+    [NAV_MENU_3B] = {
+        .menuType = MZ_MENU_TYPE_NAV,
+        .parent = NAV_MENU_3,
     },
     [DB_MENU_5X] = {
         .menuType = MZ_MENU_TYPE_DBASE_CHILD,

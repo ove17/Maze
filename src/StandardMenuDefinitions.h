@@ -1,9 +1,7 @@
 // StandardMenuDefinitions.h
 
 /*
- * Standard definitions used internally by Maze.
- * User-defined menu types/states/actions may be added independently
- * without modifying this file.
+ * This header contains the private definitions used internally by Maze.
  */
 
 
@@ -14,7 +12,7 @@
 
 
 static const MZ_menuTypeDefT MenuTypeDefs[MZ_MENU_TYPE_COUNT] = {
-    [MZ_MENU_TYPE_TEXT] = {
+    [MZ_MENU_TYPE_NAV] = {
         .defaultState = MZ_STATE_STD_SCROLLING,
     },
     [MZ_MENU_TYPE_DBASE] = {
@@ -34,7 +32,7 @@ static const MZ_menuActionT menuActions[MZ_STATE_COUNT][MZ_NAV_COUNT] = {
         [MZ_NAV_UP10]           = MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
         [MZ_NAV_DOWN]           = MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
         [MZ_NAV_DOWN10]         = MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
-        [MZ_NAV_ENTER_HIDDEN]   = MZ_ACTION_GO_TO_HIDDEN_MENU,
+        [MZ_NAV_GO_TO_HIDDEN]   = MZ_ACTION_GO_TO_HIDDEN_MENU,
         [MZ_NAV_LEFT]           = MZ_ACTION_GO_TO_PREVIOUS_HEADER_POSITION,
         [MZ_NAV_RIGHT]          = MZ_ACTION_GO_TO_NEXT_HEADER_POSITION,
     },
@@ -44,8 +42,8 @@ static const MZ_menuActionT menuActions[MZ_STATE_COUNT][MZ_NAV_COUNT] = {
         [MZ_NAV_UP10]       = MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
         [MZ_NAV_DOWN]       = MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
         [MZ_NAV_DOWN10]     = MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
-        [MZ_NAV_RIGHT]      = MZ_ACTION_GO_TO_EDIT_RECORD_OR_NEXT_HEADER_POSITION,
         [MZ_NAV_LEFT]       = MZ_ACTION_GO_TO_MANAGE_RECORDS_OR_PREVIOUS_HEADER_POSITION,
+        [MZ_NAV_RIGHT]      = MZ_ACTION_GO_TO_EDIT_RECORD_OR_NEXT_HEADER_POSITION,
     },
     [MZ_STATE_DBASE_EDITING] = {
         [MZ_NAV_RIGHT]      = MZ_ACTION_GO_1_COLUMN_FORWARD,
@@ -61,6 +59,8 @@ static const MZ_menuActionT menuActions[MZ_STATE_COUNT][MZ_NAV_COUNT] = {
         [MZ_NAV_ENTER]      = MZ_ACTION_GOTO_CHANGE_RECORD_TYPE,
         [MZ_NAV_LEFT]       = MZ_ACTION_GOTO_INSERT_RECORD,
         [MZ_NAV_RIGHT]      = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_UP]         = MZ_ACTION_LEAVE_MANAGE_RECORDS,
+        [MZ_NAV_DOWN]         = MZ_ACTION_LEAVE_MANAGE_RECORDS,
     },
     [MZ_STATE_DBASE_CHANGE_RECORD_TYPE] = {
         [MZ_NAV_LEFT]       = MZ_ACTION_GOTO_INSERT_RECORD,

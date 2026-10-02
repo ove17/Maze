@@ -72,22 +72,17 @@ static bool decreaseMenuItemBy(const uint8_t delta) {
 
 
 static uint8_t getMaxMenuItems(void) {
-    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_TEXT) {
-        uint8_t numChildren = MenuDefs[MenuId].typeTxt.numChildren;
-        if (MenuDefs[MenuId].typeTxt.lastChildIsHidden) {
+    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_NAV) {
+        uint8_t numChildren = MenuDefs[MenuId].typeNav.numItems;
+        if (MenuDefs[MenuId].typeNav.lastChildIsHidden) {
             numChildren--;
         }
-        assert(numChildren < 254);  // numChildren was TOO LOW
+        assert(numChildren < 254);  // numChildren was too LOW
         return numChildren - 1;
-    } else
-    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
+    } else {
         const uint8_t tableId = getTableId();
         return DbFuncs->getNumRecords(tableId) - 1;
-    } else
-    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE_CHILD) {
-        return DbFuncs->getNumRecords(ChildTableId) - 1;
     }
-    assert(0 && "no menu type specified");
 }
 
 
@@ -244,7 +239,7 @@ static uint8_t getChildItemIdOfParent(void) {
     MZ_MenuDefinitionT menuCurrent = MenuDefs[MenuId];
     MZ_MenuDefinitionT menuParent = MenuDefs[menuCurrent.parent];
     uint8_t i = 0;
-    while (menuParent.typeTxt.children[i] != MenuId) {
+    while (menuParent.typeNav.children[i] != MenuId) {
         i++;
     }
     return i;
@@ -254,7 +249,7 @@ static uint8_t getChildItemIdOfParent(void) {
 static void goToParentMenu(void) {
     MenuItem = getChildItemIdOfParent();
     MenuId = MenuDefs[MenuId].parent;
-    if (MenuDefs[MenuId].typeTxt.lastChildIsHidden) {
+    if (MenuDefs[MenuId].typeNav.lastChildIsHidden) {
         MenuItem--; // go to penultimate item, as the last is hidden
     }
     setDefaultMenuState();
@@ -262,22 +257,25 @@ static void goToParentMenu(void) {
 
 
 static void goToChildMenu(void) {
-    MenuId = MenuDefs[MenuId].typeTxt.children[MenuItem];
+    MenuId = MenuDefs[MenuId].typeNav.children[MenuItem];
     MenuItem = 0;
     setDefaultMenuState();
 }
 
 
-static void goToDbParentMenu(void) {
+static void goToParentDbMenu(const uint8_t parentMenuItem) {
+    MenuItem = parentMenuItem;
     MenuId = MenuDefs[MenuId].parent;
 }
 
 
-static void goToDbChildMenu(void) {
+static uint8_t goToChildDbMenu(void) {
+    const uint8_t parentMenuItem = MenuItem;
     ChildTableId = getChildTableId();
-    assert(ChildTableId != NO_MENU);
+    assert(ChildTableId != NO_MENU); // children must be defined in external DB
     MenuId = MenuDefs[MenuId].typeDb.dbChildMenu;
     MenuItem = 0;
+    return parentMenuItem;
 }
 
 
@@ -287,22 +285,25 @@ static void goToDbChildMenu(void) {
  */
 static bool goToMenu(void) {
     static uint8_t parentMenuItem = 0;
-    if (MenuItem == MZ_MENU_ITEM_IS_HEADER) { // to parent
+    if (MenuItem == MZ_MENU_ITEM_IS_HEADER) { // go to parent
         if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE_CHILD) {
-            MenuItem = parentMenuItem;
-            goToDbParentMenu();
+            goToParentDbMenu(parentMenuItem);
         } else {
             goToParentMenu();
         }
-    } else { // to child
+    } else { // go to child
         if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
-            parentMenuItem = MenuItem;
-            goToDbChildMenu();
+            if (MenuDefs[MenuId].typeDb.dbChildMenu > 0) {
+                parentMenuItem = goToChildDbMenu();
+            } else
+                return false; // DB menu has no children
         } else
-        if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_TEXT) {
+        if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_NAV
+                && MenuDefs[MenuId].typeNav.children) {
             goToChildMenu();
         } else {
             return false; // DB child must not have children
+                          // or navMenu has no children
         }
     }
     return true;
@@ -310,7 +311,7 @@ static bool goToMenu(void) {
 
 
 static bool tryGoToHiddenMenu(void) {
-    if (MenuDefs[MenuId].typeTxt.lastChildIsHidden
+    if (MenuDefs[MenuId].typeNav.lastChildIsHidden
             && MenuItem == getMaxMenuItems()) {
         MenuItem++; // go to the last (hidden) menu item
         goToChildMenu();
@@ -344,14 +345,28 @@ static uint8_t getActionFromColumnIndex(void) {
  * CUSTOM functions only return actionId, there is no code execution
  */
 MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
-    uint8_t action = menuActions[MenuState][nav];
+
+    uint8_t action = MZ_ACTION_NONE;
+    if (MenuDefs[MenuId].numNavActions > 0) {
+        for (uint8_t i = 0; i < MenuDefs[MenuId].numNavActions; i++) {
+            if (MenuDefs[MenuId].navActions[i].nav == nav) {
+                action = MenuDefs[MenuId].navActions[i].action;
+                break;
+            }
+        }
+    }
+    if (action == MZ_ACTION_NONE) {
+        action = menuActions[MenuState][nav];
+    }
+
     bool success = true;
     switch (action) {
         case MZ_ACTION_GO_TO_MENU_OR_EXECUTE :
             if (ColumnIndex > 0) { // in the header, but not on back/home
                 return getActionFromColumnIndex();
+            } else {
+                success = goToMenu();
             }
-            success = goToMenu();
             break;
         case MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD :
             success = increaseMenuItemBy(1);

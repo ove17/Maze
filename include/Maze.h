@@ -8,7 +8,7 @@
  *          The caller may map this from its (keyboard) input.
  *  MZ_menuActionT - actions that result from the navigation input
  *  MZ_menuTypeT - the basic menu type, Maze provides:
- *                      MZ_MENU_TYPE_TEXT
+ *                      MZ_MENU_TYPE_NAV
  *                      MZ_MENU_TYPE_DBASE
  *  MZ_menuStateT - a menuType may have multiple states with different
  *                  nav-action maps
@@ -25,10 +25,11 @@
  *  - the cursor is at the 1st character during scrolling
  *  - the top-left character(0,0) is the [HOME] position to go one menu up
  *  - there is 1 TOP_MENU, all others are (grand...)children of TOP_MENU
- *  - TOP_MENU must be the first menu in the menuDefinition array
+ *  - TOP_MENU must be the first menu in the menuDefinition array (thus enum)
  *  - TOP_MENU will be active at init
  *  - the cursor location at init is row,col (2,0)
  *       i.e. the 1st item of the 1st menu
+ *  - the cursor may traverse the header to access/execute headerActions
  *
  * Maze supports basic database browsing and editing:
  *  - database access functions must be provided by the caller
@@ -39,17 +40,16 @@
  * MenuItem starts at 0 for the 1st menu item (txt and db)
  *
  * Maze supports hidden menus:
- *      An MZ_MENU_TYPE_TEXT can have its last menu item hidden. This menu item
- *      cannot be made visible, but can be entered using MZ_MENU_TYPE_TEXT when
+ *      An MZ_MENU_TYPE_NAV can have its last menu item hidden. This menu item
+ *      cannot be made visible, but can be entered using MZ_MENU_TYPE_NAV when
  *      the cursor is on the penultimate (i.e. the last visible) menu item.
  * A hidden menu behaves normally and can be any type and can have children.
  *
+ * A MZ_MENU_TYPE_NAV without .children is valid: it is a message with multiple
+ *  lines that can be scrolled.
+ *
  */
 
-//  header = static and may have cursor-pos-defined functions
-//  define x,y cursor positions + action + key?
-//          NOTE: x is different for different languages!
-//          SO: editing must be automatic! with (DB_)getCursorXfor(columnId) oid
 
 /*
  * Standard menu definitions are private to Maze.c.
@@ -83,7 +83,7 @@ typedef enum {
     MZ_NAV_END,
     MZ_NAV_HOME,
     MZ_NAV_MODIFY,  // shift-enter
-    MZ_NAV_ENTER_HIDDEN,    // some secret key combo
+    MZ_NAV_GO_TO_HIDDEN,    // some secret key combo
     MZ_NAV_COUNT,
     MZ_NAV_PLUS1 = MZ_NAV_UP,
     MZ_NAV_MINUS1 = MZ_NAV_DOWN,
@@ -138,9 +138,10 @@ enum {
  */
 typedef uint8_t MZ_menuTypeT;
 enum {
-    MZ_MENU_TYPE_TEXT,
+    MZ_MENU_TYPE_NAV,
     MZ_MENU_TYPE_DBASE,
     MZ_MENU_TYPE_DBASE_CHILD,
+    MZ_MENU_TYPE_SELECT,
     MZ_MENU_TYPE_COUNT
 };
 
@@ -171,9 +172,16 @@ typedef struct {
 
 
 typedef struct {
-    uint8_t action;
+    MZ_navT nav;
+    MZ_menuActionT action;
+} MZ_navActionT;
+
+
+typedef struct {
+    MZ_menuActionT action;
     uint8_t cursorPos;
 } MZ_headerActionT;
+
 
 /*
  * Definition of a menu :
@@ -185,20 +193,23 @@ typedef struct {
  *   will simply not be accessible.
  */
 typedef struct {
-    //    entryFunction_t entryFunction; OR entryAction?
-    //    exitFunction_t entryFunction; OR exitAction?
     const uint8_t parent;
     const MZ_menuTypeT menuType;
     const uint8_t numHeaderActions;   // in addition to back/home
     const MZ_headerActionT * headerActions;
+    const uint8_t numNavActions;
+    const MZ_navActionT * navActions;
     const bool editRecordFieldsDisabled;
     const bool insertDeleteRecordsDisabled;
     union {
         struct {
-            const uint8_t numChildren;
+            const uint8_t numItems;
             const uint8_t * children;
             const bool lastChildIsHidden;
-        } typeTxt;
+        } typeNav;
+        struct {
+            const uint8_t numLines;
+        } typeMsg;
         struct {
             const uint8_t dbTableId;
             const uint8_t dbChildMenu;
