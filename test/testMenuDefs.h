@@ -188,17 +188,17 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [DB_MENU_2A] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = NAV_MENU_2,
-        .editRecordFieldsDisabled = true,
         .typeDb = {
             .dbTableId = 18,
+            .editRecordFieldsDisabled = true,
         },
     },
     [DB_MENU_2B] = {
         .menuType = MZ_MENU_TYPE_DBASE,
         .parent = NAV_MENU_2,
-        .insertDeleteRecordsDisabled = true,
         .typeDb = {
             .dbTableId = 21,
+            .insertDeleteRecordsDisabled = true,
         },
     },
     [NAV_MENU_2C] = {
@@ -214,8 +214,11 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         .parent = NAV_MENU_3,
     },
     [DB_MENU_5X] = {
-        .menuType = MZ_MENU_TYPE_DBASE_CHILD,
+        .menuType = MZ_MENU_TYPE_DBASE,
         .parent = DB_MENU_5,
+        .typeDb = {
+            .isChild = true,
+        }
     },
 };
 

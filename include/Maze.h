@@ -63,13 +63,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MZ_MENU_ITEM_IS_HEADER 0xFF
+//#define MZ_MENU_ITEM_IS_HEADER 0xFF
 
 
 /*
  * NAV_* are all possible navigation inputs to the MZ_navigateMaze function.
  * The caller needs to map its (keyboard) input to these values.
- * Custom navigation inputs may be defined separately, do not edit this enum!
+ * Custom navigation inputs must be defined separately, do not edit this enum!
  */
 typedef uint8_t MZ_navT;
 typedef enum {
@@ -82,13 +82,9 @@ typedef enum {
     MZ_NAV_LEFT,
     MZ_NAV_END,
     MZ_NAV_HOME,
-    MZ_NAV_MODIFY,  // shift-enter
+    MZ_NAV_MODIFY,          // e.g. shift-enter
     MZ_NAV_GO_TO_HIDDEN,    // some secret key combo
     MZ_NAV_COUNT,
-    MZ_NAV_PLUS1 = MZ_NAV_UP,
-    MZ_NAV_MINUS1 = MZ_NAV_DOWN,
-    MZ_NAV_PLUS10 = MZ_NAV_UP10,
-    MZ_NAV_MINUS10 = MZ_NAV_DOWN10,
 } MZ_nav_stdT;
 
 
@@ -100,35 +96,42 @@ typedef enum {
  * Custom actions may be defined separately, do not edit this enum!
  */
 typedef uint8_t MZ_menuActionT;
-enum {
+typedef enum {
     MZ_ACTION_NONE,
-    MZ_ACTION_GO_TO_MENU_OR_EXECUTE,
+
+    MZ_ACTION_GO_TO_MENU,
     MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
-    MZ_ACTION_SCROLL_1_MENU_ITEM_BACK,
+    MZ_ACTION_SCROLL_1_MENU_ITEM_BACK_OR_GO_TO_HEADER,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
+    MZ_ACTION_GO_TO_HIDDEN_MENU,
+
+    MZ_ACTION_GO_TO_PARENT_OR_RETURN_HEADER_ACTION,
     MZ_ACTION_GO_TO_NEXT_HEADER_POSITION,
     MZ_ACTION_GO_TO_PREVIOUS_HEADER_POSITION,
-    MZ_ACTION_GO_TO_EDIT_RECORD_OR_NEXT_HEADER_POSITION,
-    MZ_ACTION_GO_TO_MANAGE_RECORDS_OR_PREVIOUS_HEADER_POSITION,
+    MZ_ACTION_LEAVE_HEADER,
+
+    MZ_ACTION_GO_TO_EDIT_RECORD,
     MZ_ACTION_GO_1_COLUMN_FORWARD,
-    MZ_ACTION_GO_1_COLUMN_BACK,
     MZ_ACTION_GO_10_COLUMNS_FORWARD,
+    MZ_ACTION_GO_1_COLUMN_BACK,
     MZ_ACTION_GO_10_COLUMNS_BACK,
     MZ_ACTION_INCREASE_VALUE_BY_1,
-    MZ_ACTION_DECREASE_VALUE_BY_1,
     MZ_ACTION_INCREASE_VALUE_BY_10,
+    MZ_ACTION_DECREASE_VALUE_BY_1,
     MZ_ACTION_DECREASE_VALUE_BY_10,
     MZ_ACTION_LEAVE_MANAGE_RECORDS,
+
+    MZ_ACTION_GO_TO_MANAGE_RECORDS,
     MZ_ACTION_GOTO_CHANGE_RECORD_TYPE,
     MZ_ACTION_LEAVE_INSERT_RECORD,
     MZ_ACTION_GOTO_INSERT_RECORD,
-    MZ_ACTION_GOTO_DELETE_RECORD,
     MZ_ACTION_INSERT_RECORD,
+    MZ_ACTION_GOTO_DELETE_RECORD,
     MZ_ACTION_DELETE_RECORD,
-    MZ_ACTION_GO_TO_HIDDEN_MENU,
+
     MZ_ACTION_COUNT
-};
+} MZ_menuActionStdT;
 
 
 /*
@@ -137,33 +140,9 @@ enum {
 typedef enum {
     MZ_MENU_TYPE_NAV,
     MZ_MENU_TYPE_DBASE,
-    MZ_MENU_TYPE_DBASE_CHILD,
     MZ_MENU_TYPE_SELECT,
     MZ_MENU_TYPE_COUNT
 } MZ_menuTypeT;
-
-
-/*
- * A menu can be in different states, where the basic menuDefinition remains
- *  the same, but the menuActions change.
- */
-typedef enum {
-    MZ_STATE_STD_SCROLLING,
-    MZ_STATE_DBASE_SCROLLING,
-    MZ_STATE_DBASE_EDITING,
-    MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE,
-    MZ_STATE_DBASE_CHANGE_RECORD_TYPE,
-    MZ_STATE_DBASE_INSERT_RECORD,
-    MZ_STATE_DBASE_CANNOT_INSERT_RECORD,
-    MZ_STATE_DBASE_DELETE_RECORD,
-    MZ_STATE_DBASE_CANNOT_DELETE_RECORD,
-    MZ_STATE_COUNT
-} MZ_menuStateT;
-
-
-typedef struct {
-    const MZ_menuStateT defaultState;
-} MZ_menuTypeDefT;
 
 
 typedef struct {
@@ -182,10 +161,16 @@ typedef struct {
  * Definition of a menu :
  *
  * NOTE:
- *  numHeaderPositions can NOT be used in the Main Menu (by design), because it
+ *  numHeaderActions can NOT be used in the Main Menu (by design), because it
  *   does not have a back/home location to access them from.
- *  Defining numHeaderPositions in the main menu will not lead to errors, they
+ *  Defining numHeaderActions in the main menu will not lead to errors, they
  *   will simply not be accessible.
+ *
+ * FIXME: menu types are determined by WHAT do they show:
+ *          MZ_MENU_TYPE_TEXT compile txt
+ *          MZ_MENU_TYPE_LIST runtime txt
+ *              selection list, or also std menu with children?
+ *          MZ_MENU_TYPE_DBASE db content
  */
 typedef struct {
     const uint8_t parent;
@@ -194,8 +179,6 @@ typedef struct {
     const MZ_headerActionT * headerActions;
     const uint8_t numNavActions;
     const MZ_navActionT * navActions;
-    const bool editRecordFieldsDisabled;
-    const bool insertDeleteRecordsDisabled;
     union {
         struct {
             const uint8_t numItems;
@@ -203,15 +186,12 @@ typedef struct {
             const bool lastChildIsHidden;
         } typeNav;
         struct {
-            const uint8_t numLines;
-        } typeMsg;
-        struct {
             const uint8_t dbTableId;
             const uint8_t dbChildMenu;
+            const bool isChild;
+            const bool editRecordFieldsDisabled;
+            const bool insertDeleteRecordsDisabled;
         } typeDb;
-        struct {
-            const bool noProperties;
-        } typeDbChild;
     };
 } MZ_MenuDefinitionT;
 
@@ -279,7 +259,7 @@ uint8_t MZ_getMenuItem(void);
 /*
  * Returns the current menu state
  */
-MZ_menuStateT MZ_getMenuState(void);
+uint8_t MZ_getMenuState(void);
 
 
 /*
@@ -297,8 +277,6 @@ uint8_t MZ_getCursorRow(void);
 
 /*
  * Returns the current X position on the display, starting at 0
- *
- * FIXME: SO Maze must know the x-pos of editable values! HOW?
  */
 uint8_t MZ_getCursorColumn(void);
 
