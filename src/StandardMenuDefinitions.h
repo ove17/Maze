@@ -32,7 +32,7 @@ typedef enum {
 //TODO: consider: is de extra stap in insert/delete/change nodig (in Maze) WAT doet die?
 static const MZ_menuActionT menuActions[MZ_STATE_COUNT][MZ_NAV_COUNT] = {
     [MZ_STATE_SCROLLING] = {
-        [MZ_NAV_ENTER]          = MZ_ACTION_GO_TO_MENU,
+        [MZ_NAV_ENTER]          = MZ_ACTION_SELECT_MENU_ITEM,
         [MZ_NAV_UP]             = MZ_ACTION_SCROLL_1_MENU_ITEM_BACK_OR_GO_TO_HEADER,
         [MZ_NAV_UP10]           = MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK,
         [MZ_NAV_DOWN]           = MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,

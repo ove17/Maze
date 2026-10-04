@@ -110,14 +110,14 @@ static const MZ_navActionT menu1BnavActions[numMenu1BnavActions] = {
 
 static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
     [MAIN_MENU] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .typeNav = {
             .numItems = numMainChildren,
             .children = menuMainChildren,
         },
     },
     [NAV_MENU_1] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = MAIN_MENU,
         .numHeaderActions = numMenu1HeaderActions,
         .headerActions = menu1HeaderActions,
@@ -127,7 +127,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         },
     },
     [NAV_MENU_2] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = MAIN_MENU,
         .typeNav = {
             .numItems = numMenu2Children,
@@ -136,7 +136,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         },
     },
     [NAV_MENU_3] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = MAIN_MENU,
         .typeNav = {
             .numItems = numMenu3Children,
@@ -168,7 +168,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         },
     },
     [NAV_MENU_1A] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = NAV_MENU_1,
         .numHeaderActions = numMenu1AheaderActions,
         .headerActions = menu1AheaderActions,
@@ -177,7 +177,7 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         },
     },
     [NAV_MENU_1B] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = NAV_MENU_1,
         .numNavActions = numMenu1BnavActions,
         .navActions = menu1BnavActions,
@@ -202,15 +202,15 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         },
     },
     [NAV_MENU_2C] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = NAV_MENU_2,
     },
     [NAV_MENU_3A] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = NAV_MENU_3,
     },
     [NAV_MENU_3B] = {
-        .menuType = MZ_MENU_TYPE_NAV,
+        .menuType = MZ_MENU_TYPE_FIXED,
         .parent = NAV_MENU_3,
     },
     [DB_MENU_5X] = {
@@ -221,18 +221,3 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         }
     },
 };
-
-
-static const MZ_DbaseFunctionsT DbaseFunctions = {
-    .getNumRecords = DB_getNumRecords,
-    .getNumColumnsInFormat = DB_getNumColumnsInFormat,
-    .changeValue = DB_changeValue,
-    .insertRecordAfter = DB_insertRecordAfter,
-    .canRecordBeAdded = DB_canRecordBeAdded,
-    .deleteRecord = DB_deleteRecord,
-    .canRecordBeDeleted = DB_canRecordBeDeleted,
-    .isRecordTypeVariable = DB_isRecordTypeVariable,
-    .getChildTableId = DB_getChildTableId,
-    .getColumnX = DB_getColumnX,
-};
-

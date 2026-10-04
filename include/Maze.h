@@ -8,10 +8,9 @@
  *          The caller may map this from its (keyboard) input.
  *  MZ_menuActionT - actions that result from the navigation input
  *  MZ_menuTypeT - the basic menu type, Maze provides:
- *                      MZ_MENU_TYPE_NAV
+ *                      MZ_MENU_TYPE_FIXED
+ *                      MZ_MENU_TYPE_LIST
  *                      MZ_MENU_TYPE_DBASE
- *  MZ_menuStateT - a menuType may have multiple states with different
- *                  nav-action maps
  *
  * StandardMenuDefinitions.h defines the nav-action maps for each menuState
  *
@@ -40,12 +39,12 @@
  * MenuItem starts at 0 for the 1st menu item (txt and db)
  *
  * Maze supports hidden menus:
- *      An MZ_MENU_TYPE_NAV can have its last menu item hidden. This menu item
- *      cannot be made visible, but can be entered using MZ_MENU_TYPE_NAV when
+ *      An MZ_MENU_TYPE_FIXED can have its last menu item hidden. This menu item
+ *      cannot be made visible, but can be entered using MZ_MENU_TYPE_FIXED when
  *      the cursor is on the penultimate (i.e. the last visible) menu item.
  * A hidden menu behaves normally and can be any type and can have children.
  *
- * A MZ_MENU_TYPE_NAV without .children is valid: it is a message with multiple
+ * A MZ_MENU_TYPE_FIXED without .children is valid: it is a message with multiple
  *  lines that can be scrolled.
  *
  */
@@ -99,7 +98,7 @@ typedef uint8_t MZ_menuActionT;
 typedef enum {
     MZ_ACTION_NONE,
 
-    MZ_ACTION_GO_TO_MENU,
+    MZ_ACTION_SELECT_MENU_ITEM,
     MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD,
     MZ_ACTION_SCROLL_10_MENU_ITEMS_FORWARD,
     MZ_ACTION_SCROLL_1_MENU_ITEM_BACK_OR_GO_TO_HEADER,
@@ -130,6 +129,8 @@ typedef enum {
     MZ_ACTION_GOTO_DELETE_RECORD,
     MZ_ACTION_DELETE_RECORD,
 
+    MZ_ACTION_SELECTED,
+
     MZ_ACTION_COUNT
 } MZ_menuActionStdT;
 
@@ -138,9 +139,9 @@ typedef enum {
  * menuTypes define the behaviour of generic menus.
  */
 typedef enum {
-    MZ_MENU_TYPE_NAV,
+    MZ_MENU_TYPE_FIXED,
     MZ_MENU_TYPE_DBASE,
-    MZ_MENU_TYPE_SELECT,
+    MZ_MENU_TYPE_LIST,
     MZ_MENU_TYPE_COUNT
 } MZ_menuTypeT;
 
@@ -166,10 +167,11 @@ typedef struct {
  *  Defining numHeaderActions in the main menu will not lead to errors, they
  *   will simply not be accessible.
  *
- * FIXME: menu types are determined by WHAT do they show:
- *          MZ_MENU_TYPE_TEXT compile txt
- *          MZ_MENU_TYPE_LIST runtime txt
- *              selection list, or also std menu with children?
+ * menu types are determined by WHAT do they show:
+ *          MZ_MENU_TYPE_FIXED compile-time size
+ *          MZ_MENU_TYPE_LIST runtime size
+ *              selection list
+ *              could also be std menu with children?
  *          MZ_MENU_TYPE_DBASE db content
  */
 typedef struct {
@@ -241,6 +243,12 @@ void MZ_init(const MZ_MenuDefinitionT * mazeDef,
  *                      if the column is already at is maximum value.
  */
 MZ_menuActionT MZ_navigateMaze(const MZ_navT nav);
+
+
+/*
+ * Sets the runtime value of the number of items for a MZ_MENU_TYPE_LIST
+ */
+void MZ_setNumListItems(const uint8_t numListItems);
 
 
 /*

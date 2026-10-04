@@ -35,6 +35,7 @@ static uint8_t MenuItem = 0;
 static uint8_t ColumnIndex = 0;
 static MZ_menuStateT MenuState = MZ_STATE_SCROLLING;
 static uint8_t ChildTableId = 0xFF;
+static uint8_t NumListItems = 0;
 
 
 void MZ_init(const MZ_MenuDefinitionT * menuDefs,
@@ -45,6 +46,7 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
     MenuItem = 0;
     MenuState = MZ_STATE_SCROLLING;
     ColumnIndex = 0;
+    NumListItems = 0;
 }
 
 
@@ -71,17 +73,21 @@ static uint8_t getTableId(void) {
 
 
 static uint8_t getMaxMenuItems(void) {
-    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_NAV) {
+    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_FIXED) {
         uint8_t numChildren = MenuDefs[MenuId].typeNav.numItems;
         if (MenuDefs[MenuId].typeNav.lastChildIsHidden) {
             numChildren--;
         }
         assert(numChildren < 254);  // numChildren was too LOW
         return numChildren - 1;
-    } else {
+    } else if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
         const uint8_t tableId = getTableId();
         return DbFuncs->getNumRecords(tableId) - 1;
+    } else if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_LIST) {
+        assert (NumListItems > 0);
+        return NumListItems - 1;
     }
+    assert(0 && "Invalid menu type");
 }
 
 
@@ -303,7 +309,7 @@ static bool goToChildMenu(void) {
             goToChildDbMenu();
         } else
             return false; // DB menu has no children
-    } else if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_NAV
+    } else if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_FIXED
             && MenuDefs[MenuId].typeNav.children) {
         goToChildTxtMenu();
     } else {
@@ -314,7 +320,7 @@ static bool goToChildMenu(void) {
 
 
 static bool tryGoToHiddenMenu(void) {
-    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_NAV
+    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_FIXED
             && MenuDefs[MenuId].typeNav.lastChildIsHidden
             && MenuItem == getMaxMenuItems()) {
         MenuItem++; // go to the last (hidden) menu item
@@ -326,7 +332,7 @@ static bool tryGoToHiddenMenu(void) {
 
 
 static bool tryGoToChangeOrInsertRecord(void) {
-    if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_NAV
+    if (MenuDefs[MenuId].menuType != MZ_MENU_TYPE_DBASE
             || MenuDefs[MenuId].typeDb.insertDeleteRecordsDisabled) {
         return false;
     }
@@ -343,6 +349,9 @@ static MZ_menuActionT getActionFromColumnIndex(void) {
 }
 
 
+/*
+ * Returns a custom action if it exists, or the standard action if not.
+ */
 static MZ_menuActionT getAction(MZ_navT nav) {
     if (MenuDefs[MenuId].numNavActions > 0) {
         for (uint8_t i = 0; i < MenuDefs[MenuId].numNavActions; i++) {
@@ -366,8 +375,12 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
     bool success = true;
     switch (action) {
 
-        case MZ_ACTION_GO_TO_MENU :
-            success = goToChildMenu();
+        case MZ_ACTION_SELECT_MENU_ITEM :
+            if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_LIST) {
+                return MZ_ACTION_SELECTED;
+            } else {
+                success = goToChildMenu();
+            }
             break;
         case MZ_ACTION_SCROLL_1_MENU_ITEM_FORWARD :
             success = increaseMenuItemBy(1);
@@ -468,6 +481,13 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
     }
     return success ? action : MZ_ACTION_NONE;
 
+}
+
+
+// MUST be specified when using MZ_MENU_TYPE_LIST
+void MZ_setNumListItems(const uint8_t numListItems) {
+    assert (numListItems > 0);
+    NumListItems = numListItems;
 }
 
 

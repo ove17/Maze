@@ -6,73 +6,20 @@ extern "C" {
     #include "Maze.h"
     #include "dbMock.h"
     #include "StandardMenuDefinitions.h"
-    #include "testMenuDefs.h"
+    #include "testData/dbFunctions.h"
+    #include "testData/testMenuDefs.h"
 }
 
 
 /*
  * TODO:
- *      - change MENUTYPENAV to TXT or fixed oid???
- *      - implement MZ_MENU_TYPE_LIST
- *
- *      consider splitting up into multiple test files with menuDefs
- *          DO BOTH: small for individual features
- *                  big for combinations
- *
- *      dataManagement submenu import:
- *          MZ_MENU_TYPE_SELECT with confirmationNav == ENTER
- *          where does the list come from?
- *          large array in RAM?
- *          so the select menu must receive a ptr to this list + numItems
- *          the ptr may be static, but it contents may be regenerated as
- *              required
- *
- *  All definitions that do not need extending should get their own type and
- *      should be moved from (public) Maze.h to (private) StandardMenuDefs.hj
- *
- * Necessary extensions:
- *  - MZ_menuActionT : custom actions (used in headerActions)
- *  - TODO MZ_navT : custom nav keys, e.g. :
- *          AM_KEY: how to add to existing menuActions matrix?
- *
- * Currently without extensions:
- *  - MZ_menuTypeT
- *  - MZ_menuStateT
- *
- * Custom left to do?
- *      - running menu:
- *          (NavigateMenus.c:controlRunningMenu)
- *          are they AM_STATES ?
- *              start - playing - paused - finishing
- *              + *_stopped states (for X-Net stop/error)
- *          or are they an extra property in MZ_headerActionT?
- *              e.g. .goToMenu ?
- *          start = trains table
- *          others = loops table
- *          MOET LUKKEN MET headerActions!
- *      - running menu: F keys - HANDLED OUTSIDE MAZE? HOW?
- *      - AM key
- *          running Menu <-> anywhere
- *              save context necessary
- *              jump to menu necessary:
- *                  goToRunningMenuPlay()
- *                  goToSavedNavigation()
- *      - SH-AM key : ?
- *      - expert/normal mode? (or give this up?)
- *
- * DONE:
- *      switching accessories in accessory menu
- *          act on STATE_EDITING + MZ_NAV_UP/MINUS1
- *      occupation sensors menu
- *          MZ_MENU_TYPE_NAV without children
- *      dataManagement submenu export:
- *          MZ_MENU_TYPE_NAV without children, with menuHeaderAction = confirm
- *      dataManagement submenu delete:
- *          MZ_MENU_TYPE_NAV without children, with menuHeaderAction = confirm
- *      logging submenu = txtMenu
- *          bootCount (view value only) - or in title?
- *          clear log (confirm = enter)
- *          view log (dbMenu: only scroll, no edit/manage)
+ *      split up into multiple test files with menuDefs
+ *          - fixedMenu (as menu and as msg)
+ *              - hidden
+ *          - dbaseMenu (incl. special features(?))
+ *              - dbChild
+ *              - edit/manage bools
+ *          - nested (~ current)
  *
  * Update comments in Maze.h
  * Improve README.md
@@ -416,7 +363,7 @@ TEST(DbaseMenuScrolling,
     goToMenuItem(4, 2);
     DB_MOCK_setChildTableId(18);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_ENTER);
-    BYTES_EQUAL(MZ_ACTION_GO_TO_MENU, action);
+    BYTES_EQUAL(MZ_ACTION_SELECT_MENU_ITEM, action);
     BYTES_EQUAL(0, MZ_getMenuItem());
     BYTES_EQUAL(DB_MENU_5X, MZ_getMenuId());
 }
@@ -1719,7 +1666,7 @@ TEST_GROUP(MessageMenu) {
 };
 
 
-/* MZ_MENU_TYPE_NAV as MESSAGE :
+/* MZ_MENU_TYPE_FIXED as MESSAGE :
  */
 
 
@@ -1780,4 +1727,4 @@ TEST(MessageMenu,
 }
 
 
-// end MZ_MENU_TYPE_NAV as MESSAGE
+// end MZ_MENU_TYPE_FIXED as MESSAGE
