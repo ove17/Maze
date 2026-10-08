@@ -1,7 +1,10 @@
 // dbMock.c
 
+#include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#define MAX_COLUMNS 20
 
 static uint8_t NumRecords = 0;
 static uint8_t MaxNumRecords = 0xFF;
@@ -12,7 +15,7 @@ static uint16_t MinValue = 0;
 static uint8_t RecordThatCannotBeDeleted = 0xFF;
 static bool RecordTypeIsVariable = false;
 static uint8_t ChildTableId = 0xFF;
-static uint8_t * ColumnXpositions;
+static uint8_t FormatXpositions[MAX_COLUMNS];
 
 static uint8_t LastAccessedTableId = 0xFF;
 
@@ -24,7 +27,7 @@ uint8_t DB_getNumRecords(const uint8_t tableId) {
 
 
 uint8_t DB_getNumColumnsInFormat(const uint8_t tableId,
-                                 const uint8_t recordId) {
+                                  const uint8_t recordId) {
     LastAccessedTableId = tableId;
     return NumColumns;
 }
@@ -92,10 +95,19 @@ uint8_t DB_getChildTableId(const uint8_t tableId,
 }
 
 
-uint8_t DB_getColumnX(const uint8_t tableId,
-                      const uint8_t columnId) {
+uint8_t DB_getColumnIdFromFormat(const uint8_t tableId,
+                                 const uint8_t recordId,
+                                 const uint8_t recordFormatIndex) {
     LastAccessedTableId = tableId;
-    return ColumnXpositions[columnId];
+    return recordFormatIndex;   // FIXME: how to test this?
+}
+
+
+uint8_t DB_getCursorColumnFromFormat(const uint8_t tableId,
+                                     const uint8_t recordId,
+                                     const uint8_t recordFormatIndex) {
+    LastAccessedTableId = tableId;
+    return FormatXpositions[recordFormatIndex];
 }
 
 
@@ -113,7 +125,6 @@ void DB_MOCK_init(void) {
     RecordTypeIsVariable = false;
     ChildTableId = 0xFF;
     LastAccessedTableId = 0xFF;
-
 }
 
 
@@ -126,10 +137,16 @@ void DB_MOCK_setMaxNumRecords(const uint8_t maxNumRecords) {
     MaxNumRecords = maxNumRecords;
 }
 
-void DB_MOCK_setColumns(const uint8_t numColumns,
-                        uint8_t * columnXpositions) {
+
+/* numColumns is the number of db columns that appears in the format, NOT
+ * the total number of columns in the record.
+ */
+void DB_MOCK_setRecordFormat(const uint8_t numColumns,
+                             uint8_t * formatXpositions) {
     NumColumns = numColumns;
-    ColumnXpositions = columnXpositions;
+    memcpy(FormatXpositions,
+           formatXpositions,
+           numColumns * sizeof(uint8_t));
 }
 
 

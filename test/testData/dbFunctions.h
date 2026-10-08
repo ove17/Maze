@@ -2,6 +2,10 @@
  * To use mocks in tests
  */
 
+#ifndef DB_FUNCTIONS_H
+#define DB_FUNCTIONS_H
+
+
 static const MZ_DbaseFunctionsT DbaseFunctions = {
     .getNumRecords = DB_getNumRecords,
     .getNumColumnsInFormat = DB_getNumColumnsInFormat,
@@ -12,5 +16,8 @@ static const MZ_DbaseFunctionsT DbaseFunctions = {
     .canRecordBeDeleted = DB_canRecordBeDeleted,
     .isRecordTypeVariable = DB_isRecordTypeVariable,
     .getChildTableId = DB_getChildTableId,
-    .getColumnX = DB_getColumnX,
+    .getCursorColumnFromFormat = DB_getCursorColumnFromFormat,
+    .getColumnIdFromFormat = DB_getColumnIdFromFormat,
 };
+
+#endif

@@ -17,10 +17,12 @@ INCLUDE_DIRS += $(SRC_DIR)
 INCLUDE_DIRS += $(CPPUTEST_HOME)/include
 INCLUDE_DIRS += $(CPPUTEST_HOME)/include/Platforms/Gcc
 INCLUDE_DIRS += $(MOCK_DIR)
+INCLUDE_DIRS += $(TEST_DIR)/helpers
 
 SRC_DIRS +=	$(SRC_DIR)
 TEST_SRC_DIRS =	$(TEST_DIR)
 TEST_SRC_DIRS += $(MOCK_DIR)
+TEST_SRC_DIRS += $(TEST_DIR)/helpers
 
 # what to call the test binary
 TEST_TARGET = testMaze
@@ -72,3 +74,8 @@ CXXFLAGS += -include $(CPPUTEST_HOME)/include/CppUTest/MemoryLeakDetectorNewMacr
 CFLAGS += -include $(CPPUTEST_HOME)/include/CppUTest/MemoryLeakDetectorMallocMacros.h
 CFLAGS += -g
 CFLAGS += -fms-extensions
+
+SANITIZER_FLAGS = -fsanitize=address,undefined
+CFLAGS += $(SANITIZER_FLAGS)
+CXXFLAGS += $(SANITIZER_FLAGS)
+LDFLAGS += $(SANITIZER_FLAGS)

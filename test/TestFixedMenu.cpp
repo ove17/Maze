@@ -1,4 +1,4 @@
-// TestListMenu.cpp
+// TestFixedMenu.cpp
 
 #include "CppUTest/TestHarness.h"
 
@@ -6,20 +6,17 @@ extern "C" {
     #include "Maze.h"
     #include "dbMock.h"
     #include "StandardMenuDefinitions.h"
-    #include "testData/ListMenuDefs.h"
+    #include "testData/FixedMenuDefs.h"
     #include "helpers/navigationFunctions.h"
     #include "helpers/MZ_testAssertions.h"
 }
 
 
-#define NUM_ITEMS 17
-
-TEST_GROUP(ListMenu) {
+TEST_GROUP(FixedMenu) {
     void setup() {
         DB_MOCK_init();
-        MZ_init(ListMenuDefs, NULL);
+        MZ_init(FixedMenuDefs, NULL);
         MZ_navigateMaze(MZ_NAV_ENTER);
-        MZ_setNumListItems(NUM_ITEMS);
     }
 
     void teardown() {
@@ -27,39 +24,10 @@ TEST_GROUP(ListMenu) {
 };
 
 
-TEST(ListMenu,
-     ENTER_onMenuItem_returnsACTION_SELECTED) {
-    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_ENTER);
+TEST(FixedMenu,
+     onMenuEntry_menuItemIs0_inFIXED_MENU_andStateSCROLLING) {
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
-        .menuItem = 0,
-        .state = MZ_STATE_SCROLLING,
-        .cursorRow = 2,
-        .cursorColumn = 0
-    }), MZ_getNavState());
-    BYTES_EQUAL(MZ_ACTION_SELECTED, action);
-}
-
-
-TEST(ListMenu,
-     DOWN_onListWith1item_staysAtItem0_andReturnsACTION_NONE) {
-    MZ_setNumListItems(1);
-    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_DOWN);
-    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
-        .menuItem = 0,
-        .state = MZ_STATE_SCROLLING,
-        .cursorRow = 2,
-        .cursorColumn = 0
-    }), MZ_getNavState());
-    BYTES_EQUAL(MZ_ACTION_NONE, action);
-}
-
-
-TEST(ListMenu,
-     onMenuEntry_menuItemIs0) {
-    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
@@ -68,11 +36,11 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
+TEST(FixedMenu,
      DOWN_atEntry_goesToItem1) {
     MZ_navigateMaze(MZ_NAV_DOWN);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 1,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
@@ -81,13 +49,13 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
+TEST(FixedMenu,
      DOWN_onLastItem_staysOnLastItem_andReturnsACTION_NONE) {
-    goToItem(NUM_ITEMS - 1);
+    goToItem(NUM_ITEMS_FIXED_MENU0 - 1);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_DOWN);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
-        .menuItem = NUM_ITEMS - 1,
+        .menuId = FIXED_MENU0,
+        .menuItem = NUM_ITEMS_FIXED_MENU0 - 1,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
         .cursorColumn = 0
@@ -96,11 +64,11 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
+TEST(FixedMenu,
      DOWN10_atEntry_goesToMenuItem10) {
     MZ_navigateMaze(MZ_NAV_DOWN10);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 10,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
@@ -109,13 +77,13 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
-     DOWN10_onLastItemMinus5_goesToLastItem) {
-    goToItem(NUM_ITEMS - 1 - 5);
+TEST(FixedMenu,
+     DOWN10_onLastItemMinus2_goesToLastItem) {
+    goToItem(NUM_ITEMS_FIXED_MENU0 - 1 - 2);
     MZ_navigateMaze(MZ_NAV_DOWN10);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
-        .menuItem = NUM_ITEMS - 1,
+        .menuId = FIXED_MENU0,
+        .menuItem = NUM_ITEMS_FIXED_MENU0 - 1,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
         .cursorColumn = 0
@@ -123,13 +91,13 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
+TEST(FixedMenu,
      DOWN10_onLastItem_staysOnLastItem_andReturnsACTION_NONE) {
-    goToItem(NUM_ITEMS - 1);
+    goToItem(NUM_ITEMS_FIXED_MENU0 - 1);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_DOWN10);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
-        .menuItem = NUM_ITEMS - 1,
+        .menuId = FIXED_MENU0,
+        .menuItem = NUM_ITEMS_FIXED_MENU0 - 1,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
         .cursorColumn = 0
@@ -138,11 +106,11 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
-     UP_onItem0_goesToHeader_andSetsCursorRowTo0) {
+TEST(FixedMenu,
+     UP_onMenuItem0_goesToHeader_andSetsCursorRowTo0) {
     MZ_navigateMaze(MZ_NAV_UP);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_IN_HEADER,
         .cursorRow = 0,
@@ -151,26 +119,25 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
-     UP_onHeader_staysInHeader_andReturnsACTION_NONE) {
+TEST(FixedMenu,
+     UP_onLastMenuItem_goesToPreviousMenuItem) {
+    goToItem(NUM_ITEMS_FIXED_MENU0 - 1);
     MZ_navigateMaze(MZ_NAV_UP);
-    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_UP);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
-        .menuItem = 0,
-        .state = MZ_STATE_IN_HEADER,
-        .cursorRow = 0,
+        .menuId = FIXED_MENU0,
+        .menuItem = NUM_ITEMS_FIXED_MENU0 - 2,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
         .cursorColumn = 0
     }), MZ_getNavState());
-    BYTES_EQUAL(MZ_ACTION_NONE, action);
 }
 
 
-TEST(ListMenu,
+TEST(FixedMenu,
      UP10_onItem0_staysOnItem0_andReturnsACTION_NONE) {
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_UP10);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
@@ -180,12 +147,12 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
-     UP10_onItem5_goesToItem0) {
-    goToItem(5);
+TEST(FixedMenu,
+     UP10_onItem7_goesToItem0) {
+    goToItem(7);
     MZ_navigateMaze(MZ_NAV_UP10);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
@@ -194,13 +161,13 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
-     UP10_onItem15_goesToItem5) {
-    goToItem(15);
+TEST(FixedMenu,
+     UP10_onLastItem_goesToItemLastMinus10) {
+    goToItem(NUM_ITEMS_FIXED_MENU0 - 1);
     MZ_navigateMaze(MZ_NAV_UP10);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
-        .menuItem = 5,
+        .menuId = FIXED_MENU0,
+        .menuItem = NUM_ITEMS_FIXED_MENU0 - 1 - 10,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
         .cursorColumn = 0
@@ -208,11 +175,11 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
+TEST(FixedMenu,
      RIGHT_onMenuItem_staysOnItem_andReturnsACTION_NONE) {
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_RIGHT);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
@@ -222,11 +189,11 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
+TEST(FixedMenu,
      LEFT_onMenuItem_staysOnItem_andReturnsACTION_NONE) {
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_LEFT);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
@@ -236,15 +203,83 @@ TEST(ListMenu,
 }
 
 
-TEST(ListMenu,
-     GOTO_HIDDEN_onMenuItem_staysOnItem_andReturnsACTION_NONE) {
+TEST(FixedMenu,
+     GOTO_HIDDEN_onMenuWithoutHiddenItems_staysOnItem_andReturnsACTION_NONE) {
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_GO_TO_HIDDEN);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
-        .menuId = LIST_MENU,
+        .menuId = FIXED_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_SCROLLING,
         .cursorRow = 2,
         .cursorColumn = 0
     }), MZ_getNavState());
     BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+//////
+
+
+TEST_GROUP(MainMenu) {
+    void setup() {
+        DB_MOCK_init();
+        MZ_init(FixedMenuDefs, NULL);
+    }
+
+    void teardown() {
+    }
+};
+
+
+TEST(MainMenu,
+     UP_onMainMenuItem0_staysOnItem0_andReturnsACTION_NONE) {
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_UP);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = MAIN_MENU,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(MainMenu,
+     DOWN_onItem0inMainMenu_goesToItem1) {
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = MAIN_MENU,
+        .menuItem = 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(MainMenu,
+     DOWN_onLastItemInMainMenu_staysAtLastItem) {
+    goToItem(numMainChildren - 1);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = MAIN_MENU,
+        .menuItem = 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(MainMenu,
+     ENTER_onItem1inMainMenu_goesToItem0ofFIXED_MENU1) {
+    goToItem(1);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = FIXED_MENU1,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
 }

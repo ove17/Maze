@@ -32,7 +32,10 @@ static const MZ_DbaseFunctionsT * DbFuncs = NULL;
 
 static uint8_t MenuId = TOP_MENU;
 static uint8_t MenuItem = 0;
-static uint8_t ColumnIndex = 0;
+static uint8_t RecordFormatIndex = 0;
+static uint8_t HeaderActionIndex = 0;
+
+
 static MZ_menuStateT MenuState = MZ_STATE_SCROLLING;
 static uint8_t ChildTableId = 0xFF;
 static uint8_t NumListItems = 0;
@@ -45,7 +48,8 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
     MenuId = TOP_MENU;
     MenuItem = 0;
     MenuState = MZ_STATE_SCROLLING;
-    ColumnIndex = 0;
+    RecordFormatIndex = 0;
+    HeaderActionIndex = 0;
     NumListItems = 0;
 }
 
@@ -106,8 +110,8 @@ static bool increaseMenuItemBy(const uint8_t delta) {
 static bool tryGoToNextHeaderPosition(void) {
     assert(MenuState == MZ_STATE_IN_HEADER);
     if (MenuDefs[MenuId].numHeaderActions > 0
-            && ColumnIndex < MenuDefs[MenuId].numHeaderActions) {
-        ColumnIndex++;
+            && HeaderActionIndex < MenuDefs[MenuId].numHeaderActions) {
+        HeaderActionIndex++;
         return true;
     }
     return false;
@@ -117,58 +121,55 @@ static bool tryGoToNextHeaderPosition(void) {
 static bool tryGoToPreviousHeaderPosition(void) {
     assert(MenuState == MZ_STATE_IN_HEADER);
     if (MenuDefs[MenuId].numHeaderActions > 0
-            && ColumnIndex > 0) {
-        ColumnIndex--;
+            && HeaderActionIndex > 0) {
+        HeaderActionIndex--;
         return true;
     }
     return false;
 }
 
 
-static bool increaseColumnBy(const uint8_t delta) {
-    const uint8_t initialValue = ColumnIndex;
-    const uint8_t tableId = getTableId();
-    const uint8_t max = DbFuncs->getNumColumnsInFormat(tableId, MenuItem) - 1;
-    if (ColumnIndex + delta < max) {
-        ColumnIndex += delta;
-    } else {
-        ColumnIndex = max;
-    }
-    return ColumnIndex != initialValue;
+static void leaveHeader(void) {
+    HeaderActionIndex = 0;
+    MenuState = MZ_STATE_SCROLLING;
 }
 
 
-// recordType is always 1st column, but must be skipped
-static uint8_t getFirstColumnIndex(void) {
+static bool increaseColumnBy(const uint8_t delta) {
+    const uint8_t initialValue = RecordFormatIndex;
     const uint8_t tableId = getTableId();
-    if (DbFuncs->isRecordTypeVariable(tableId)) {
-        return 1;
+    const uint8_t max = DbFuncs->getNumColumnsInFormat(tableId, MenuItem) - 1;
+    if (RecordFormatIndex + delta < max) {
+        RecordFormatIndex += delta;
     } else {
-        return 0;
+        RecordFormatIndex = max;
     }
+    return RecordFormatIndex != initialValue;
 }
 
 
 static bool decreaseColumnBy(const uint8_t delta) {
-    const uint8_t initialValue = ColumnIndex;
-    const uint8_t firstColumnId = getFirstColumnIndex();
-    if (ColumnIndex == firstColumnId) {
+    const uint8_t initialValue = RecordFormatIndex;
+    if (RecordFormatIndex == 0) {
         MenuState = MZ_STATE_SCROLLING;
-        ColumnIndex = 0;
-    } else
-    if (ColumnIndex > delta) {
-        ColumnIndex -= delta;
-    } else {
-        ColumnIndex = firstColumnId;
+        return true;
     }
-    return ColumnIndex != initialValue;
+    if (RecordFormatIndex > delta) {
+        RecordFormatIndex -= delta;
+    } else {
+        RecordFormatIndex = 0;
+    }
+    return RecordFormatIndex != initialValue;
 }
 
 
-// NOTE: changeValue() must limit to min/max values
+// NOTE: the changeValue() function limits to min/max values
 static bool changeValueBy(const int8_t delta) {
     const uint8_t tableId = getTableId();
-    return DbFuncs->changeValue(tableId, MenuItem, ColumnIndex, delta);
+    const uint8_t columnId = DbFuncs->getColumnIdFromFormat(tableId,
+                                                            MenuItem,
+                                                            RecordFormatIndex);
+    return DbFuncs->changeValue(tableId, MenuItem, columnId, delta);
 }
 
 
@@ -225,7 +226,7 @@ static bool tryGoToEditRecord(void) {
         return false;
     }
     MenuState = MZ_STATE_DBASE_EDITING;
-    ColumnIndex = getFirstColumnIndex();
+    RecordFormatIndex = 0;
     return true;
 }
 
@@ -290,7 +291,7 @@ static uint8_t getChildTableId(void) {
 
 /*
  * NOTE: parent data is stored for DB children, as their parents are not
- *          explicitly defined in the menuDef
+ *          explicitly defined in menuDef
  */
 static void goToChildDbMenu(void) {
     SET_DB_CHILD_INDEX_OF_PARENT(MenuItem);
@@ -343,9 +344,9 @@ static bool tryGoToChangeOrInsertRecord(void) {
 }
 
 
-static MZ_menuActionT getActionFromColumnIndex(void) {
-    assert(ColumnIndex <= MenuDefs[MenuId].numHeaderActions);
-    return  MenuDefs[MenuId].headerActions[ColumnIndex - 1].action;
+static MZ_menuActionT getHeaderAction(void) {
+    assert(HeaderActionIndex <= MenuDefs[MenuId].numHeaderActions);
+    return  MenuDefs[MenuId].headerActions[HeaderActionIndex - 1].action;
 }
 
 
@@ -393,6 +394,8 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
                 success = decreaseMenuItemBy(1);
             } else if (MenuId != TOP_MENU) {
                 MenuState = MZ_STATE_IN_HEADER;
+            } else {
+                success = false;
             }
             break;
         case MZ_ACTION_SCROLL_10_MENU_ITEMS_BACK :
@@ -403,8 +406,8 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
             break;
 
         case MZ_ACTION_GO_TO_PARENT_OR_RETURN_HEADER_ACTION :
-            if (ColumnIndex > 0) {
-                return getActionFromColumnIndex();
+            if (HeaderActionIndex > 0) {
+                return getHeaderAction();
             } else {
                 goToParentMenu();
             }
@@ -416,7 +419,7 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
             success = tryGoToNextHeaderPosition();
             break;
         case MZ_ACTION_LEAVE_HEADER :
-            MenuState = MZ_STATE_SCROLLING;
+            leaveHeader();
             break;
 
         case MZ_ACTION_GO_TO_EDIT_RECORD :
@@ -506,11 +509,6 @@ uint8_t MZ_getMenuState(void) {
 }
 
 
-uint8_t MZ_getColumnIndex(void) {
-    return ColumnIndex;
-}
-
-
 uint8_t MZ_getCursorRow(void) {
     if (MenuState == MZ_STATE_IN_HEADER) {
         return CURSOR_ROW_HEADER;
@@ -520,19 +518,30 @@ uint8_t MZ_getCursorRow(void) {
 }
 
 
-/* NOTE: ColumnIndex is offset by 1, because 0 is the back/home position
+/* NOTE: HeaderActionIndex is offset by 1, because 0 is the back/home position
  */
 uint8_t MZ_getCursorColumn(void) {
     if (MenuState == MZ_STATE_DBASE_EDITING) {
         const uint8_t tableId = getTableId();
-        return DbFuncs->getColumnX(tableId, ColumnIndex);
+        return DbFuncs->getCursorColumnFromFormat(tableId, MenuItem, RecordFormatIndex);
     } else if (MenuState == MZ_STATE_IN_HEADER) {
-        if (ColumnIndex > 0) {
-            assert(ColumnIndex <= MenuDefs[MenuId].numHeaderActions);
-            return  MenuDefs[MenuId].headerActions[ColumnIndex - 1].cursorPos;
+        if (HeaderActionIndex > 0) {
+            assert(HeaderActionIndex <= MenuDefs[MenuId].numHeaderActions);
+            return  MenuDefs[MenuId].headerActions[HeaderActionIndex - 1].cursorColumn;
         }
         return CURSOR_COL_HEADER_HOME;
     } else {
         return CURSOR_COL_BROWSING;
     }
+}
+
+
+MZ_navStateT MZ_getNavState(void) {
+    return (MZ_navStateT) {
+        .menuId = MenuId,
+        .menuItem = MenuItem,
+        .state = MenuState,
+        .cursorRow = MZ_getCursorRow(),
+        .cursorColumn = MZ_getCursorColumn(),
+    };
 }

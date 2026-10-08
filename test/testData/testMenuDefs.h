@@ -1,5 +1,10 @@
 // testMenuDefs.h
 
+#ifndef TEST_MENU_DEFS_H
+#define TEST_MENU_DEFS_H
+
+#include "Maze.h"
+
 
 enum {
     MAIN_MENU = 0,
@@ -80,23 +85,23 @@ static const uint8_t menu3children[numMenu3Children] = {
 
 static const uint8_t numMenu1AheaderActions = 1;
 static const MZ_headerActionT menu1AheaderActions[numMenu1AheaderActions] = {
-    {.action = TEST_ACTION_CONFIRM, .cursorPos = 2},
+    {.action = TEST_ACTION_CONFIRM, .cursorColumn = 2},
 };
 
 
 static const uint8_t numMenu1HeaderActions = 3;
 static const MZ_headerActionT menu1HeaderActions[numMenu1HeaderActions] = {
-    {.action = TEST_ACTION_A, .cursorPos = 2},
-    {.action = TEST_ACTION_B, .cursorPos = 4},
-    {.action = TEST_ACTION_C, .cursorPos = 6},
+    {.action = TEST_ACTION_A, .cursorColumn = 2},
+    {.action = TEST_ACTION_B, .cursorColumn = 4},
+    {.action = TEST_ACTION_C, .cursorColumn = 6},
 };
 
 
 static const uint8_t numMenu6HeaderActions = 3;
 static const MZ_headerActionT menu6HeaderActions[numMenu6HeaderActions] = {
-    {.action = TEST_ACTION_D, .cursorPos = 3},
-    {.action = TEST_ACTION_E, .cursorPos = 5},
-    {.action = TEST_ACTION_F, .cursorPos = 7},
+    {.action = TEST_ACTION_D, .cursorColumn = 3},
+    {.action = TEST_ACTION_E, .cursorColumn = 5},
+    {.action = TEST_ACTION_F, .cursorColumn = 7},
 };
 
 
@@ -221,3 +226,5 @@ static const MZ_MenuDefinitionT MenuDef[NUM_MENUS] = {
         }
     },
 };
+
+#endif

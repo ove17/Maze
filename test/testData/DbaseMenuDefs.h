@@ -1,24 +1,25 @@
-// ListMenuDefs.h
-
-#ifndef LIST_MENU_DEFS_H
-#define LIST_MENU_DEFS_H
+// DbaseMenuDefs.h
 
 #include "Maze.h"
 
+#ifndef DBASE_MENU_DEFS_H
+#define DBASE_MENU_DEFS_H
+
+
 enum {
     MAIN_MENU = 0,
-        LIST_MENU,
+    DBASE_MENU0,
     NUM_MENUS
 };
 
 
 static const uint8_t numMainChildren = 1;
 static const uint8_t menuMainChildren[numMainChildren] = {
-    LIST_MENU,
+    DBASE_MENU0,
 };
 
 
-static const MZ_MenuDefinitionT ListMenuDefs[NUM_MENUS] = {
+static const MZ_MenuDefinitionT DbaseMenuDefs[NUM_MENUS] = {
     [MAIN_MENU] = {
         .menuType = MZ_MENU_TYPE_FIXED,
         .typeNav = {
@@ -26,9 +27,12 @@ static const MZ_MenuDefinitionT ListMenuDefs[NUM_MENUS] = {
             .children = menuMainChildren,
         },
     },
-    [LIST_MENU] = {
-        .menuType = MZ_MENU_TYPE_LIST,
+    [DBASE_MENU0] = {
+        .menuType = MZ_MENU_TYPE_DBASE,
         .parent = MAIN_MENU,
+        .typeDb = {
+            .dbTableId = 5,
+        }
     },
 };
 

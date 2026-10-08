@@ -1,6 +1,12 @@
 /*
  * Maze.h
  *
+ * TODO: reconsider return value / getters:
+ *  - should MZ_navigateMaze return only action,
+ *      or action + other state vars in a struct?
+ *  - should individual getters exist, or should they be in
+ *      a struct together?
+ *
  * Library for navigating UI menus.
  *
  * Maze implements the following:
@@ -88,6 +94,24 @@ typedef enum {
 
 
 /*
+ * A menu can be in different states, where the basic menuDefinition remains
+ *  the same, but the menuActions change.
+ */
+typedef enum {
+    MZ_STATE_SCROLLING,
+    MZ_STATE_IN_HEADER,
+    MZ_STATE_DBASE_EDITING,
+    MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE,
+    MZ_STATE_DBASE_CHANGE_RECORD_TYPE,
+    MZ_STATE_DBASE_INSERT_RECORD,
+    MZ_STATE_DBASE_CANNOT_INSERT_RECORD,
+    MZ_STATE_DBASE_DELETE_RECORD,
+    MZ_STATE_DBASE_CANNOT_DELETE_RECORD,
+    MZ_STATE_COUNT
+} MZ_menuStateT;
+
+
+/*
  * ACTION_* are all possible actions that are linked to navigation input in
  *  menuTypes.
  * The return value of the MZ_navigateMaze function is an action, so that the
@@ -154,8 +178,18 @@ typedef struct {
 
 typedef struct {
     MZ_menuActionT action;
-    uint8_t cursorPos;
+    uint8_t cursorColumn;
 } MZ_headerActionT;
+
+
+typedef struct {
+    uint8_t menuId;
+    uint8_t menuItem;
+    MZ_menuStateT state;
+    MZ_menuActionT action;
+    uint8_t cursorRow;
+    uint8_t cursorColumn;
+} MZ_navStateT;
 
 
 /*
@@ -210,7 +244,7 @@ typedef struct {
 typedef struct {
     uint8_t (*getNumRecords)(uint8_t tableId);
     uint8_t (*getNumColumnsInFormat)(uint8_t tableId,
-                             uint8_t recordId);
+                                     uint8_t recordId);
     bool (*changeValue)(uint8_t tableId,
                         uint8_t recordId,
                         uint8_t columnId,
@@ -225,8 +259,12 @@ typedef struct {
     bool (*isRecordTypeVariable)(uint8_t tableId);
     uint8_t (*getChildTableId)(uint8_t tableId,
                                uint8_t recordId);
-    uint8_t (*getColumnX)(uint8_t tableId,
-                          uint8_t columnId);
+    uint8_t (*getColumnIdFromFormat)(uint8_t tableId,
+                                     uint8_t recordId,
+                                     uint8_t recordFormatIndex);
+    uint8_t (*getCursorColumnFromFormat)(uint8_t tableId,
+                                         uint8_t recordId,
+                                         uint8_t recordFormatIndex);
 } MZ_DbaseFunctionsT;
 
 
@@ -271,12 +309,6 @@ uint8_t MZ_getMenuState(void);
 
 
 /*
- * Returns the index of the current column/field
- */
-uint8_t MZ_getColumnIndex(void);
-
-
-/*
  * Returns the current Y position on the display,
  * from the top, starting at 0
  */
@@ -287,5 +319,11 @@ uint8_t MZ_getCursorRow(void);
  * Returns the current X position on the display, starting at 0
  */
 uint8_t MZ_getCursorColumn(void);
+
+
+/*
+ * Returns all current state variablers
+ */
+MZ_navStateT MZ_getNavState(void);
 
 #endif
