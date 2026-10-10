@@ -252,7 +252,6 @@ static void goToParentTxtMenu(void) {
             && MenuItem == MenuDefs[MenuId].typeNav.numItems - 1) {
         MenuItem--; // go to penultimate item, as the last is hidden
     }
-    MenuState = MZ_STATE_SCROLLING;
 }
 
 
@@ -273,6 +272,7 @@ static void goToParentMenu(void) {
     } else {
         goToParentTxtMenu();
     }
+    MenuState = MZ_STATE_SCROLLING;
 }
 
 

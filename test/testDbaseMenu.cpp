@@ -206,7 +206,15 @@ TEST_GROUP(DbaseMenuEditing) {
         MZ_navigateMaze(MZ_NAV_RIGHT);
     }
 
-    void teardown() {
+    void goToMenu1(void) {
+        MZ_navigateMaze(MZ_NAV_LEFT);
+        MZ_navigateMaze(MZ_NAV_UP);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+        MZ_navigateMaze(MZ_NAV_DOWN);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+    }
+
+    void teardown(void) {
     }
 };
 
@@ -333,7 +341,15 @@ TEST(DbaseMenuEditing,
 
 
 TEST(DbaseMenuEditing,
-     PLUS1_increasesDbaseValueBy1_andDoesNotChangeNavigation) {
+     UP_actsOnTheTableOfThisMenu) {
+    MZ_navigateMaze(MZ_NAV_UP);
+    BYTES_EQUAL(DbaseMenuDefs[DBASE_MENU0].typeDb.dbTableId,
+                DB_MOCK_getLastAccessedTableId());
+}
+
+
+TEST(DbaseMenuEditing,
+     UP_increasesDbaseValueBy1_andDoesNotChangeNavigation) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_UP);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
@@ -348,7 +364,7 @@ TEST(DbaseMenuEditing,
 
 
 TEST(DbaseMenuEditing,
-     PLUS1_onMaxDbaseValue_returnsACTION_NONE) {
+     UP_onMaxDbaseValue_returnsACTION_NONE) {
     DB_MOCK_setValue(8);
     DB_MOCK_setMaxValue(8);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_UP);
@@ -357,7 +373,7 @@ TEST(DbaseMenuEditing,
 
 
 TEST(DbaseMenuEditing,
-     MINUS1_decreasesDbaseValueBy1_andDoesNotChangeNavigation) {
+     DOWN_decreasesDbaseValueBy1_andDoesNotChangeNavigation) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_DOWN);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){
@@ -372,7 +388,7 @@ TEST(DbaseMenuEditing,
 
 
 TEST(DbaseMenuEditing,
-     MINUS1_onMinDbaseValue_returnsACTION_NONE) {
+     DOWN_onMinDbaseValue_returnsACTION_NONE) {
     DB_MOCK_setValue(4);
     DB_MOCK_setMinValue(4);
     MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_DOWN);
@@ -381,7 +397,7 @@ TEST(DbaseMenuEditing,
 
 
 TEST(DbaseMenuEditing,
-     PLUS10_increasesDbaseValueBy10) {
+     UP10_increasesDbaseValueBy10) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_UP10);
     BYTES_EQUAL(22, DB_MOCK_getValue(5, 0, 0));
@@ -389,12 +405,26 @@ TEST(DbaseMenuEditing,
 
 
 TEST(DbaseMenuEditing,
-     MINUS10_decreasesDbaseValueBy10) {
+     DOWN10_decreasesDbaseValueBy10) {
     DB_MOCK_setValue(12);
     MZ_navigateMaze(MZ_NAV_DOWN10);
     BYTES_EQUAL(2, DB_MOCK_getValue(5, 0, 0));
 }
 
+
+TEST(DbaseMenuEditing,
+     RIGHT_onRecordInMenuWithRecordFieldsDisabled_returnsACTION_NONE) {
+    goToMenu1();
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU1,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
 
 //////
 
@@ -417,7 +447,15 @@ TEST_GROUP(DbaseInsertState) {
         MZ_navigateMaze(MZ_NAV_LEFT);
     }
 
-    void teardown() {
+    void goToMenu2(void) {
+        MZ_navigateMaze(MZ_NAV_UP);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+        MZ_navigateMaze(MZ_NAV_DOWN);
+        MZ_navigateMaze(MZ_NAV_DOWN);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+    }
+
+    void teardown(void) {
     }
 };
 
@@ -521,6 +559,21 @@ TEST(DbaseInsertState,
 
 
 TEST(DbaseInsertState,
+     RIGHT_inTableWithVariableRecordType_goesToChangeRecordTypeState) {
+    goToInsertAtItem(0);
+    DB_MOCK_setRecordTypeToVariable();
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU0,
+        .menuItem = 0,
+        .state = MZ_STATE_DBASE_GOTO_CHANGE_RECORD_TYPE,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(DbaseInsertState,
      ENTER_whichInsertsLastRecord_goesToCannotInsertState) {
     DB_MOCK_setNumRecords(7);
     goToInsertAtItem(3);
@@ -533,6 +586,21 @@ TEST(DbaseInsertState,
         .cursorColumn = 0
     }), MZ_getNavState());
     BYTES_EQUAL(maxNumRecords, DB_getNumRecords(5));
+}
+
+
+TEST(DbaseInsertState,
+     LEFT_onRecordInMenuWithCannotInsertDeleteRecords_returnsACTION_NONE) {
+    goToMenu2();
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_LEFT);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU2,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
 }
 
 
@@ -1107,6 +1175,142 @@ TEST(DbaseChangeRecordTypeState,
         .menuId = DBASE_MENU0,
         .menuItem = 0,
         .state = MZ_STATE_DBASE_CHANGE_RECORD_TYPE,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+///////
+
+#define NUM_CHILD_RECORDS 7
+
+
+TEST_GROUP(DbaseMenu_child) {
+    const uint8_t childTableId = 18;
+
+    void setup() {
+        DB_MOCK_init();
+        MZ_init(DbaseMenuDefs, &DbaseFunctions);
+        goToItem(3);
+        DB_MOCK_setChildTableId(childTableId);
+        DB_MOCK_setNumRecords(NUM_CHILD_RECORDS);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+    }
+
+    void goToChild(const uint8_t childId) {
+        for (uint8_t i = 0; i < childId; i++) {
+            MZ_navigateMaze(MZ_NAV_DOWN);
+        }
+        MZ_navigateMaze(MZ_NAV_ENTER);
+    }
+
+    void teardown(void) {
+    }
+};
+
+
+TEST(DbaseMenu_child,
+     ENTER_onDbMenuWithChildren_goesToChildDbMenu) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU3A,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(DbaseMenu_child,
+     RIGHT_onDbMenuChild_goesToEditState) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU3A,
+        .menuItem = 0,
+        .state = MZ_STATE_DBASE_EDITING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(DbaseMenu_child,
+     EDITING_DbMenuChild_actsOnCorrectTable) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_RIGHT);
+    MZ_navigateMaze(MZ_NAV_UP);
+    BYTES_EQUAL(childTableId, DB_MOCK_getLastAccessedTableId());
+}
+
+
+TEST(DbaseMenu_child,
+     UP_afterEnteringDbChildMenu_goesToHeader) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU3A,
+        .menuItem = 0,
+        .state = MZ_STATE_IN_HEADER,
+        .cursorRow = 0,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(DbaseMenu_child,
+     DOWN_afterEnteringDbChildMenu_goesToItem1) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU3A,
+        .menuItem = 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(DbaseMenu_child,
+     DOWN10_afterEnteringDbChildMenu_goesToLastItem) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_DOWN10);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU3A,
+        .menuItem = NUM_CHILD_RECORDS - 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(DbaseMenu_child,
+     exitingDbChildMenu4_goesBackToItem4InTheParentMenu) {
+    goToChild(4);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU3,
+        .menuItem = 4,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(DbaseMenu_child,
+     LEFT_goesToDbaseInsertState) {
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_navigateMaze(MZ_NAV_LEFT);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU3A,
+        .menuItem = 0,
+        .state = MZ_STATE_DBASE_INSERT_RECORD,
         .cursorRow = 2,
         .cursorColumn = 0
     }), MZ_getNavState());

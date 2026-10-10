@@ -194,6 +194,6 @@ uint8_t DB_MOCK_getLastAccessedTableId(void) {
 uint32_t DB_MOCK_getValue(const uint8_t tableId,
                           const uint8_t recordId,
                           const uint8_t columnId) {
-    LastAccessedTableId = tableId;
+//    LastAccessedTableId = tableId;
     return Value;
 }

@@ -217,6 +217,21 @@ TEST(FixedMenu,
 }
 
 
+TEST(FixedMenu,
+     GOTO_HIDDEN_onLastMenuItemWithoutHiddenMenu_returnsACTION_NONE) {
+    goToItem(NUM_ITEMS_FIXED_MENU0 - 1);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_GO_TO_HIDDEN);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = FIXED_MENU0,
+        .menuItem = NUM_ITEMS_FIXED_MENU0 - 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
 //////
 
 
@@ -282,4 +297,150 @@ TEST(MainMenu,
         .cursorRow = 2,
         .cursorColumn = 0
     }), MZ_getNavState());
+}
+
+
+///////
+
+
+TEST_GROUP(HiddenMenu) {
+    void setup() {
+        DB_MOCK_init();
+        MZ_init(FixedMenuDefs, NULL);
+    }
+
+    void teardown() {
+    }
+};
+
+
+TEST(HiddenMenu,
+     GOTO_HIDDEN_on1stMenuItem_returnsACTION_NONE) {
+    goToItem(0);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_GO_TO_HIDDEN);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = MAIN_MENU,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+TEST(HiddenMenu,
+     GOTO_HIDDEN_onMenuItem1_goesToHiddenMenu) {
+    goToItem(1);
+    MZ_navigateMaze(MZ_NAV_GO_TO_HIDDEN);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = FIXED_MENU2_HIDDEN,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(HiddenMenu,
+     ENTER_onMenuItem1_goesToMenu1) {
+    goToItem(1);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = FIXED_MENU1,
+        .menuItem = 0,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(HiddenMenu,
+     ENTER_onHeaderInHiddenMenu_goesBackToPenultimateItemOfParent) {
+    goToItem(1);
+    MZ_navigateMaze(MZ_NAV_GO_TO_HIDDEN);
+    MZ_navigateMaze(MZ_NAV_UP);
+    MZ_navigateMaze(MZ_NAV_ENTER);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = MAIN_MENU,
+        .menuItem = 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(HiddenMenu,
+     DOWN10_onMenuWithHiddenChild_goesToPenultimateMenuItem) {
+    goToItem(0);
+    MZ_navigateMaze(MZ_NAV_DOWN10);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = MAIN_MENU,
+        .menuItem = 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+}
+
+
+TEST(HiddenMenu,
+     DOWN_onPenultimateChildOfMenuWithHiddenChild_doesNothingAndReturnsACTION_NONE) {
+    goToItem(1);
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_DOWN);
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = MAIN_MENU,
+        .menuItem = 1,
+        .state = MZ_STATE_SCROLLING,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
+    BYTES_EQUAL(MZ_ACTION_NONE, action);
+}
+
+
+///////
+
+
+TEST_GROUP(navActions) {
+    void setup() {
+        DB_MOCK_init();
+        MZ_init(FixedMenuDefs, NULL);
+        goToItem(1);
+        MZ_navigateMaze(MZ_NAV_ENTER);
+    }
+
+    void teardown() {
+    }
+};
+
+
+TEST(navActions,
+     NavInputA_returnsActionA) {
+    MZ_menuActionT action = MZ_navigateMaze(TEST_NAV_A);
+    BYTES_EQUAL(TEST_ACTION_A, action);
+}
+
+
+TEST(navActions,
+     NavInputB_returnsActionB) {
+    MZ_menuActionT action = MZ_navigateMaze(TEST_NAV_B);
+    BYTES_EQUAL(TEST_ACTION_B, action);
+}
+
+
+TEST(navActions,
+     standardNavInput_onMenuWithCustomNavActions_returnsStdAction) {
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_UP);
+    BYTES_EQUAL(MZ_ACTION_SCROLL_1_MENU_ITEM_BACK_OR_GO_TO_HEADER, action);
+}
+
+
+TEST(navActions,
+     standardNavInput_whichIsOverridenInNavActions_returnsCustomAction) {
+    MZ_menuActionT action = MZ_navigateMaze(MZ_NAV_DOWN);
+    BYTES_EQUAL(TEST_ACTION_C, action);
 }
