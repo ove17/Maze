@@ -1,7 +1,7 @@
 // StandardMenuDefinitions.h
 
 /*
- * This header contains the private definitions used internally by Maze.
+ * This header contains private definitions used only internally by Maze.
  */
 
 
@@ -11,7 +11,6 @@
 #include "Maze.h"
 
 
-//TODO: consider: is de extra stap in insert/delete/change nodig (in Maze) WAT doet die?
 static const MZ_menuActionT menuActions[MZ_STATE_COUNT][MZ_NAV_COUNT] = {
     [MZ_STATE_SCROLLING] = {
         [MZ_NAV_ENTER]          = MZ_ACTION_SELECT_MENU_ITEM,

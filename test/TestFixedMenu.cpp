@@ -5,7 +5,6 @@
 extern "C" {
     #include "Maze.h"
     #include "dbMock.h"
-    #include "StandardMenuDefinitions.h"
     #include "testData/FixedMenuDefs.h"
     #include "helpers/navigationFunctions.h"
     #include "helpers/MZ_testAssertions.h"
@@ -22,6 +21,12 @@ TEST_GROUP(FixedMenu) {
     void teardown() {
     }
 };
+
+
+TEST(FixedMenu,
+     invalidNavValue_returnsACTION_NONE) {
+    BYTES_EQUAL(MZ_ACTION_NONE, MZ_navigateMaze(MZ_NAV_COUNT));
+}
 
 
 TEST(FixedMenu,

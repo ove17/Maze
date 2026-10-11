@@ -21,7 +21,7 @@ static const uint8_t menuMainChildren[numMainChildren] = {
 static const MZ_MenuDefinitionT ListMenuDefs[NUM_MENUS] = {
     [MAIN_MENU] = {
         .menuType = MZ_MENU_TYPE_FIXED,
-        .typeNav = {
+        .typeFixed = {
             .numItems = numMainChildren,
             .children = menuMainChildren,
         },

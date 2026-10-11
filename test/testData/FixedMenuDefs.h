@@ -51,7 +51,7 @@ static const MZ_navActionT menu1navActions[numMenu1navActions] = {
 static const MZ_MenuDefinitionT FixedMenuDefs[NUM_MENUS] = {
     [MAIN_MENU] = {
         .menuType = MZ_MENU_TYPE_FIXED,
-        .typeNav = {
+        .typeFixed = {
             .numItems = numMainChildren,
             .children = menuMainChildren,
             .lastChildIsHidden = true,
@@ -61,7 +61,7 @@ static const MZ_MenuDefinitionT FixedMenuDefs[NUM_MENUS] = {
     [FIXED_MENU0] = {
         .menuType = MZ_MENU_TYPE_FIXED,
         .parent = MAIN_MENU,
-        .typeNav = {
+        .typeFixed = {
             .numItems = NUM_ITEMS_FIXED_MENU0,
         }
     },
@@ -70,14 +70,14 @@ static const MZ_MenuDefinitionT FixedMenuDefs[NUM_MENUS] = {
         .parent = MAIN_MENU,
         .numNavActions = numMenu1navActions,
         .navActions = menu1navActions,
-        .typeNav = {
+        .typeFixed = {
             .numItems = NUM_ITEMS_FIXED_MENU1,
         }
     },
     [FIXED_MENU2_HIDDEN] = {
         .menuType = MZ_MENU_TYPE_FIXED,
         .parent = MAIN_MENU,
-        .typeNav = {
+        .typeFixed = {
             .numItems = NUM_ITEMS_FIXED_MENU2,
         }
     },

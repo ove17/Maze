@@ -1,65 +1,101 @@
-/*
- * Maze.h
+/* Maze.h
  *
- * TODO: reconsider return value / getters:
- *  - should MZ_navigateMaze return only action,
- *      or action + other state vars in a struct?
- *  - should individual getters exist, or should they be in
- *      a struct together?
+ * Maze is a library for navigating UI menus. It does not implement the menu
+ *  content, it only defines what each input does at which place in the menu.
  *
- * Library for navigating UI menus.
+ * The application defines the menu structure through an array of
+ *  MZ_MenuDefinitionT structs.
+ * This array must start with the ROOT_MENU with index 0. All other menus are
+ *  (grand...)children of ROOT_MENU.
+ * Navigation if performed throughthrough repeated calls to MZ_navigateMaze,
+ *  which takes MZ_navT as input (which could be mapped from a keyboard) and
+ *  returns an MZ_menuActionT indicating the resulting action.
+ * Standard actions are handled by Maze. Custom actions are returned to the
+ *  application for execution by the caller.
  *
- * Maze implements the following:
- *  MZ_navT - the navigation input
- *          The caller may map this from its (keyboard) input.
- *  MZ_menuActionT - actions that result from the navigation input
- *  MZ_menuTypeT - the basic menu type, Maze provides:
- *                      MZ_MENU_TYPE_FIXED
- *                      MZ_MENU_TYPE_LIST
- *                      MZ_MENU_TYPE_DBASE
+ * Maze implements 3 standard menu types:
+ *  MZ_MENU_TYPE_FIXED
+ *      for static menus with a fixed number of items, defined at compile-time
+ *      can be nested multiple levels
+ *      may or may not have children
+ *  MZ_MENU_TYPE_LIST
+ *      for menus with a variable number of items, set using MZ_setNumListItems
+ *      can be nested multiple levels
+ *  MZ_MENU_TYPE_DBASE
+ *      for traversing database tables, allows insertion/deletion of records
+ *          editing of values
+ *      database menus can have 1 level of children, if set in the dbase schema
  *
- * StandardMenuDefinitions.h defines the nav-action maps for each menuState
+ * Each menu has a MZ_menuStateT and depending on this, MZ_navT inputs may
+ *  result in different actions. These nav-action maps are stored in
+ *      StandardMenuDefinitions.h
+ * That header defines the standard behaviour of Maze and must not be modified.
  *
- * Maze implements the following menu concept:
- *  - character display based, fixed height x width
- *  - the cursor indicates which character has focus
- *  - the first line holds the title / header and is static
- *  - all further lines lines show menu content and can be scrolled using
- *      NAV_UP/DOWN
- *  - the middle line of the menu content has focus during scrolling
- *  - the cursor is at the 1st character during scrolling
- *  - the top-left character(0,0) is the [HOME] position to go one menu up
- *  - there is 1 TOP_MENU, all others are (grand...)children of TOP_MENU
- *  - TOP_MENU must be the first menu in the menuDefinition array (thus enum)
- *  - TOP_MENU will be active at init
- *  - the cursor location at init is row,col (2,0)
- *       i.e. the 1st item of the 1st menu
- *  - the cursor may traverse the header to access/execute headerActions
+ * The standard navigation behaviour assumes a character-based display with a
+ *  fixed number of rows and columns.
+ *  - Row 0 is a static header.
+ *  - The top-left position (row 0, column 0) is the home position, used to
+ *      return to the parent menu.
+ *  - Header actions can be accessed by moving LEFT/RIGHT while in the header
+ *      state.
+ *  - Menu content starts at row 1.
+ *  - While browsing (using UP/DOWN), the cursor is at column 0.
+ *  - The selected item is represented by the menu content displayed at the
+ *      cursor's row.
+ *  - During scrolling, the selected item is kept on the middle row of the
+ *      content area (by default row 2 on a 4 line display).
+ *
+ * The initial state of Maze is:
+ *  - MenuId = 0 (ROOT_MENU)
+ *  - MenuItem = 0
+ *  - MenuState = MZ_STATE_SCROLLING
+ *  - the cursor location is row,col (2,0)
  *
  * Maze supports basic database browsing and editing:
  *  - database access functions must be provided by the caller
- *  - a dbase menuType is available
  *
- * Maze allows extending its own menuTypes, actions and navigations
+ * Maze allows implementation of custom actions and navigations (inputs) in 2
+ *  ways:
+ *  - NavActions:
+ *      o Each menu may define zero or more navigation-action pairs.
+ *      o Custom navigation values must be defined separately, starting at
+ *          MZ_NAV_COUNT
+ *      o Standard navigation values may also be included in navActions to
+ *          override their default behaviour for that menu(state).
+ *      o NavActions are checked before the standard navigation-action mapping.
+ *      o NavActions are not tied to a cursor position. They can be triggered
+ *          from any position or menu state.
+ *      o Maze returns the mapped action without executing application-specific
+ *          behaviour. The caller is responsible for handling custom actions.
+ *  - HeaderActions:
+ *      o Each non-root menu has an implicit home position at row 0, column 0.
+ *      o Additional header actions are defined as position-action pairs in
+ *          headerActions.
+ *      o The additional positions can be browsed using LEFT/RIGHT while in the
+ *          header state.
+ *      o ENTER at the home position returns to the parent menu.
+ *      o ENTER at an additional header action returns its associated action to
+ *          the caller. The caller is responsible for executing the
+ *          corresponding application-specific behaviour.
+ *      o numHeaderActions specifies the number of additional header actions;
+ *          it does not include the implicit home position.
+ *      o Header actions cannot be accessed in ROOT_MENU because it has no
+ *          parent menu and therefore no home position.
  *
- * MenuItem starts at 0 for the 1st menu item (txt and db)
+ * Hidden menus:
+ *  An MZ_MENU_TYPE_FIXED menu may have its last item marked as hidden. This
+ *   item is excluded from normal browsing and cannot be made visible through
+ *   standard navigation.
+ *  The hidden item can be entered using MZ_NAV_GO_TO_HIDDEN when the last
+ *   visible item is selected.                                                                                                                 *  The hidden item must refer to a child menu. Once entered, that menu behaves
+ *   normally and may be of any menu type, with or without children.
  *
- * Maze supports hidden menus:
- *      An MZ_MENU_TYPE_FIXED can have its last menu item hidden. This menu item
- *      cannot be made visible, but can be entered using MZ_MENU_TYPE_FIXED when
- *      the cursor is on the penultimate (i.e. the last visible) menu item.
- * A hidden menu behaves normally and can be any type and can have children.
+ * Childless menus:
+ *  A MZ_MENU_TYPE_FIXED menu without a children array is also valid. It can be
+ *   used to display a multi-line message that can be scrolled. Header actions
+ *   may be used to provide actions such as confirmation or cancellation.
  *
- * A MZ_MENU_TYPE_FIXED without .children is valid: it is a message with multiple
- *  lines that can be scrolled.
- *
- */
-
-
-/*
  * Standard menu definitions are private to Maze.c.
- * Applications may define their own menu types, states and actions
- * using the types provided here.
  */
 
 #ifndef MAZE_H
@@ -68,13 +104,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-//#define MZ_MENU_ITEM_IS_HEADER 0xFF
-
-
 /*
  * NAV_* are all possible navigation inputs to the MZ_navigateMaze function.
  * The caller needs to map its (keyboard) input to these values.
- * Custom navigation inputs must be defined separately, do not edit this enum!
+ * Custom navigation inputs must be defined as follows (do not edit this enum):
+ * enum {
+ *      CUSTOM_NAV_1 = MZ_NAV_COUNT,
+ *      CUSTOM_NAV_2,
+ *      ...
+ * } ;
  */
 typedef uint8_t MZ_navT;
 typedef enum {
@@ -90,7 +128,7 @@ typedef enum {
     MZ_NAV_MODIFY,          // e.g. shift-enter
     MZ_NAV_GO_TO_HIDDEN,    // some secret key combo
     MZ_NAV_COUNT,
-} MZ_nav_stdT;
+} MZ_navStdT;
 
 
 /*
@@ -116,7 +154,12 @@ typedef enum {
  *  menuTypes.
  * The return value of the MZ_navigateMaze function is an action, so that the
  *  caller knows which action was performed (if any).
- * Custom actions may be defined separately, do not edit this enum!
+ * Custom actions must be defined as follows (do not edit this enum):
+ * enum {
+ *      CUSTOM_ACTION_1 = MZ_ACTION_COUNT,
+ *      CUSTOM_ACTION_2,
+ *      ...
+ * } ;
  */
 typedef uint8_t MZ_menuActionT;
 typedef enum {
@@ -182,52 +225,71 @@ typedef struct {
 } MZ_headerActionT;
 
 
+/*
+ *  Snapshot of the current navigation state.
+ *  The state is maintained internally by Maze and can be read through
+ *  MZ_getNavState(). Modifying the returned structure does not modify Maze's
+ *  internal state.
+ */
 typedef struct {
-    uint8_t menuId;
-    uint8_t menuItem;
-    MZ_menuStateT state;
-    MZ_menuActionT action;
-    uint8_t cursorRow;
-    uint8_t cursorColumn;
+    uint8_t menuId;         // the current menuId
+    uint8_t menuItem;       // the current item within the menu, starting at 0
+    MZ_menuStateT state;    // the state of the menu
+    uint8_t cursorRow;      // the y coordinate of the cursor, starting at the top at 0
+    uint8_t cursorColumn;   // the x coordinate of the cursor, starting at 0
 } MZ_navStateT;
 
 
 /*
- * Definition of a menu :
+ * Defines a single menu.
+ *  - The application supplies an array of menu definitions to MZ_init().
+ *  - A menu's ID is its index in this array. ROOT_MENU has ID 0 and must be
+ *      the first entry.
  *
  * NOTE:
- *  numHeaderActions can NOT be used in the Main Menu (by design), because it
- *   does not have a back/home location to access them from.
- *  Defining numHeaderActions in the main menu will not lead to errors, they
- *   will simply not be accessible.
- *
- * menu types are determined by WHAT do they show:
- *          MZ_MENU_TYPE_FIXED compile-time size
- *          MZ_MENU_TYPE_LIST runtime size
- *              selection list
- *              could also be std menu with children?
- *          MZ_MENU_TYPE_DBASE db content
+ *  A stand-alone or parent database table has its own menu and tableId.
+ *  A child database table has a generic menu (used by all children of one
+ *   parent). Its tableId is NOT known by Maze and is obtained from the
+ *   database.
  */
 typedef struct {
+    // ID of the parent menu. Not used for ROOT_MENU :
     const uint8_t parent;
+    // Determines menu behaviour and which member of the union is used :
     const MZ_menuTypeT menuType;
-    const uint8_t numHeaderActions;   // in addition to back/home
+    // Number of additional header actions and their definitions, excluding the
+    // implicit home position. Header actions are not accessible in ROOT_MENU :
+    const uint8_t numHeaderActions;
     const MZ_headerActionT * headerActions;
+    // Number of navigation-action mappings and their definitions. These are
+    // checked before the standard navigation-action mapping :
     const uint8_t numNavActions;
     const MZ_navActionT * navActions;
     union {
         struct {
+            // Number of menu items for a FIXED menu, including a hidden last
+            // item when lastChildIsHidden is true :
             const uint8_t numItems;
+            // Array of child menu IDs, indexed by menu item. May be NULL if
+            // the menu has no children.
             const uint8_t * children;
+            // If true, the last item is excluded from normal browsing and can
+            // only be entered using MZ_NAV_GO_TO_HIDDEN.
             const bool lastChildIsHidden;
-        } typeNav;
+        } typeFixed; // Configuration for FIXED menus.
         struct {
+            // Table ID used by a non-child database menu :
             const uint8_t dbTableId;
+            // Menu ID used to display child records, or 0 if no child menu exists.
             const uint8_t dbChildMenu;
-            const bool isChild;
+            // Indicates whether this menu displays records from a child table :
+            const bool isChild; // indicates if this menu display a child table
+            // Disables editing of database record fields :
             const bool editRecordFieldsDisabled;
+            // Disables database record management operations :
             const bool insertDeleteRecordsDisabled;
-        } typeDb;
+        } typeDb; // Configuration for DBASE menus.
+        // MZ_MENU_TYPE_LIST has no properties in this struct
     };
 } MZ_MenuDefinitionT;
 
@@ -239,90 +301,86 @@ typedef struct {
  *
  * The database implementation must guarantee:
  *   getNumRecords(tableId) >= 1
- *   getNumColumns(tableId, recordId) >= 1
  */
 typedef struct {
+    // must return > 0
     uint8_t (*getNumRecords)(uint8_t tableId);
+
+    // Returns the number of fields in the display format; must be > 0
     uint8_t (*getNumColumnsInFormat)(uint8_t tableId,
                                      uint8_t recordId);
+
+    // returns false if the value could not change (min/max)
     bool (*changeValue)(uint8_t tableId,
                         uint8_t recordId,
                         uint8_t columnId,
                         int16_t delta);
+
     bool (*insertRecordAfter)(uint8_t tableId,
                               uint8_t recordId);
+
     bool (*canRecordBeAdded)(uint8_t tableId);
+
     bool (*deleteRecord)(uint8_t tableId,
                          uint8_t recordId);
+
     bool (*canRecordBeDeleted)(uint8_t tableId,
                                uint8_t recordId);
+
+    // Returns whether table can have different record types
     bool (*isRecordTypeVariable)(uint8_t tableId);
+
+    // Returns the tableId of a child table of a parent
     uint8_t (*getChildTableId)(uint8_t tableId,
                                uint8_t recordId);
+
+    // Returns the columnId found at the nth format in the format string of
+    //  this record
     uint8_t (*getColumnIdFromFormat)(uint8_t tableId,
                                      uint8_t recordId,
                                      uint8_t recordFormatIndex);
+
+    // Returns the cursor column (location) of the nth format in the format
+    // string of this record
     uint8_t (*getCursorColumnFromFormat)(uint8_t tableId,
                                          uint8_t recordId,
                                          uint8_t recordFormatIndex);
 } MZ_DbaseFunctionsT;
 
 
+/*
+ * Must be called before using any other Maze functions. Calling this again
+ * resets the navigation state.
+ * mazeDef and functions, including any data referenced by them, must remain
+ * valid while Maze uses them.
+ */
 void MZ_init(const MZ_MenuDefinitionT * mazeDef,
              const MZ_DbaseFunctionsT *functions);
 
 
 /* This is the core navigation function:
- *  input: nav  the navigation intent, a value from MZ_nav_stdT or a custom enum
+ *  input: nav  the navigation intent, a value from MZ_navStdT or a custom MZ_navT
  *  returns:    The resulting actionId, or MZ_ACTION_NONE if no action took place
- *                  the latter may be case if the nav input:
+ *                  the latter may be the case if the nav input:
  *                  - has no action associated with it
- *                  - results in an action with no result, e.g. changeValuePlus1
- *                      if the column is already at is maximum value.
+ *                  - results in an action with no result, e.g. changeValueUp
+ *                      if the value is already at its maximum
  */
 MZ_menuActionT MZ_navigateMaze(const MZ_navT nav);
 
 
 /*
- * Sets the runtime value of the number of items for a MZ_MENU_TYPE_LIST
+ * Sets the runtime number of items for MZ_MENU_TYPE_LIST.
+ *
+ * Must be set to a value > 0 before navigating a list menu and updated
+ * by the caller when necessary. The value is shared by all list menus.
  */
 void MZ_setNumListItems(const uint8_t numListItems);
 
 
 /*
- * Returns the current menu id
- */
-uint8_t MZ_getMenuId(void);
-
-
-/*
- * Returns the current menuItem
- * menuItem = 0 is the first menu item or dbase record
- */
-uint8_t MZ_getMenuItem(void);
-
-
-/*
- * Returns the current menu state
- */
-uint8_t MZ_getMenuState(void);
-
-
-/*
- * Returns the current Y position on the display,
- * from the top, starting at 0
- */
-uint8_t MZ_getCursorRow(void);
-
-
-/*
- * Returns the current X position on the display, starting at 0
- */
-uint8_t MZ_getCursorColumn(void);
-
-
-/*
- * Returns all current state variablers
+ * Returns a snapshot of the current navigation state, including the active
+ * menu, selected item, menu state and cursor coordinates.
  */
 MZ_navStateT MZ_getNavState(void);
 

@@ -5,7 +5,6 @@
 extern "C" {
     #include "Maze.h"
     #include "dbMock.h"
-    #include "StandardMenuDefinitions.h"
     #include "testData/DbaseMenuDefs.h"
     #include "testData/dbFunctions.h"
     #include "helpers/navigationFunctions.h"
@@ -844,13 +843,18 @@ TEST(DbaseDeleteState,
     DB_MOCK_setNumRecords(20);
     goToDeleteStateOnMenuItem(19);
     MZ_navigateMaze(MZ_NAV_ENTER);
-    BYTES_EQUAL(18, MZ_getMenuItem());
+    MZ_NAV_STATE_EQUAL(((MZ_navStateT){
+        .menuId = DBASE_MENU0,
+        .menuItem = 18,
+        .state = MZ_STATE_DBASE_DELETE_RECORD,
+        .cursorRow = 2,
+        .cursorColumn = 0
+    }), MZ_getNavState());
 }
 
 
 TEST(DbaseDeleteState,
      ENTER_goesToCannotDeleteState_ifNextRecordMayNotBeDeleted) {
-    BYTES_EQUAL(2, MZ_getMenuItem());
     DB_MOCK_setRecordThatCannotBeDeletedTo(3);
     MZ_navigateMaze(MZ_NAV_ENTER);
     MZ_NAV_STATE_EQUAL(((MZ_navStateT){

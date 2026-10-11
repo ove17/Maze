@@ -1,65 +1,93 @@
 # Maze
 
-Maze is a small C library for navigating text-based menus.
+Maze is a small C library for navigating text-based menus, designed for embedded systems.
 
-## Concept
+It manages menu navigation state and maps navigation inputs to actions. Menu rendering, physical input handling and application-specific behaviour are the responsibility of the caller.
 
-Maze implements a navigation model where a cursor is moved using up/down/left/right keys, values may be modified using plus/minus keys and and the enter key is used for confirmation. The shift key allows 10-fold .
-The keys are only implemented as MZ_NAV_* enums, it is up to the caller to bind these to physical keys.
-
-Maze provides types and has a basic set of menutypes for navigating and interfacing with basic databases.
-
-The caller repeatedly executes:
-```c
-MZ_menuActionT MZ_navigateMaze(nav);
-```
-
-This function will execute the required action and return its actionId or MZ_ACTION_NONE if no action took place.
-All built-in actions are executed and may result in changing MenuId, MenuItem or MenuState. 
-The caller may provide custom actions and menuTypes, in that case MZ_navigateMaze(nav) will only return the resulting action and the caller will have to execute code if necessary for that action.
-I.e. Maze cannot accept or execute callback functions for custom menuTypes.
-
-In order to make the database functionality of Maze work with an external dbase, the caller has to provide a set of functions that execute dbase code:
-
-```c
-MZ_DbaseFunctionsT 
-```
+See Maze.h for API documentation.
 
 ## Features
 
-- Zero external dependencies
-- Allows menu structure with parent and children, which may be nested
-- Only one Top level menu exists, this has no parent.
-- Standard menu type allows navigation only
-- Dbase menu type allows dbase table access (inserting/deleting records, changing values)
-- User defined menu types may extend capabilities
-- Minimal RAM overhead
-- Designed for embedded systems
-- Menu structure (definition) cannot be changed run time
+- No external dependencies.
+- Nested menus with parent/child relationships.
+- Fixed menus, selectable lists with a runtime-defined number of items, and database-backed menus.
+- Database browsing and editing through caller-provided functions.
+- Custom navigation inputs and actions.
+- Small, statically defined menu structure.
 
-## API
+## USAGE
 
-```c
-//TODO
+Define the menu hierarchy using an array of MZ_MenuDefinitionT structures. Menu IDs correspond to array indices, with ROOT_MENU at index 0.
+
+Example: a root menu with two child menus, without a database.
+
+```
+enum {
+    ROOT_MENU = 0,
+    MENU_SETTINGS,
+    MENU_ABOUT,
+    MENU_COUNT
+};
+
+static const uint8_t rootChildren[] = {
+    MENU_SETTINGS,
+    MENU_ABOUT
+};
+
+static const MZ_MenuDefinitionT menuDefs[MENU_COUNT] = {
+    [ROOT_MENU] = {
+        .parent = ROOT_MENU,
+        .menuType = MZ_MENU_TYPE_FIXED,
+        .typeNav = {
+            .numItems = 2,
+            .children = rootChildren,
+            .lastChildIsHidden = false
+        }
+    },
+    [MENU_SETTINGS] = {
+        .parent = ROOT_MENU,
+        .menuType = MZ_MENU_TYPE_FIXED,
+        .typeNav = {
+            .numItems = 3,
+            .children = NULL,
+            .lastChildIsHidden = false
+        }
+    },
+    [MENU_ABOUT] = {
+        .parent = ROOT_MENU,
+        .menuType = MZ_MENU_TYPE_FIXED,
+        .typeNav = {
+            .numItems = 4,
+            .children = NULL,
+            .lastChildIsHidden = false
+        }
+    }
+};
 ```
 
-## Usage
+Initialize Maze before use:
 
-```c
-//TODO
+```
+MZ_init(menuDefs, NULL);
 ```
 
-## Constraints
+Map physical inputs to MZ_navT values and repeatedly call MZ_navigateMaze() and handle the returned action:
 
-TODO
+```
+MZ_menuActionT action = MZ_navigateMaze(nav);
+```
 
-## Lifetime rules
+Maze executes built-in navigation actions and returns the resulting action ID. Custom actions are returned to the caller for application-specific handling.
 
-TODO:
-- only 1 menuDef
-- only 1 db functions
-- only 1 customMenuDef / actions / Nav's / menuTypes / menuStates
+Database menus require an MZ_DbaseFunctionsT implementation supplied by the caller.
 
-## Design notes
+## Design and constraints
 
-Maze prioritizes simplicity and deterministic behavior over flexibility. It is intended for embedded or performance-sensitive environments.
+- The menu hierarchy is defined statically. MZ_MENU_TYPE_LIST supports a runtime-defined number of selectable items, for example files or other dynamically enumerated entries.
+- MZ_setNumListItems() sets the number of items in a list menu. The caller is responsible for keeping this value consistent with the items presented by the application.
+- Maze maintains a single global navigation state; multiple independent Maze instances are not supported.
+- Custom menu behaviour is implemented by the caller; Maze does not accept callbacks for custom menu types.
+- The caller is responsible for rendering menus and mapping physical inputs to navigation values.
+- Database access and mutation are delegated to caller-provided functions.
+
+Maze prioritizes simplicity and low resource usage over multiple independent navigation contexts or a fully extensible callback-based menu system.

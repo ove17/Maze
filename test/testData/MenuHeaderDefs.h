@@ -49,7 +49,7 @@ static const MZ_headerActionT menu3headerActions[numMenu3headerActions] = {
 static const MZ_MenuDefinitionT MenuHeaderDefs[NUM_MENUS] = {
     [MAIN_MENU] = {
         .menuType = MZ_MENU_TYPE_FIXED,
-        .typeNav = {
+        .typeFixed = {
             .numItems = numMainChildren,
             .children = menuMainChildren,
         },
@@ -57,7 +57,7 @@ static const MZ_MenuDefinitionT MenuHeaderDefs[NUM_MENUS] = {
     [MENU_1] = {
         .menuType = MZ_MENU_TYPE_FIXED,
         .parent = MAIN_MENU,
-        .typeNav = {
+        .typeFixed = {
             .numItems = 5,
         },
     },
@@ -66,7 +66,7 @@ static const MZ_MenuDefinitionT MenuHeaderDefs[NUM_MENUS] = {
         .parent = MAIN_MENU,
         .numHeaderActions = numMenu2headerActions,
         .headerActions = menu2headerActions,
-        .typeNav = {
+        .typeFixed = {
             .numItems = 5,
         },
     },
@@ -75,7 +75,7 @@ static const MZ_MenuDefinitionT MenuHeaderDefs[NUM_MENUS] = {
         .parent = MAIN_MENU,
         .numHeaderActions = numMenu3headerActions,
         .headerActions = menu3headerActions,
-        .typeNav = {
+        .typeFixed = {
             .numItems = 5,
         },
     },

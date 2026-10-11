@@ -7,7 +7,7 @@
 #include "StandardMenuDefinitions.h"
 
 
-#define TOP_MENU 0
+#define ROOT_MENU 0
 #define NO_MENU 0xFF
 #define CURSOR_ROW_HEADER 0
 #define CURSOR_COL_HEADER_HOME 0
@@ -30,7 +30,7 @@ static uint8_t getSetDbChildIndexOfParent(uint8_t value){
 static const MZ_MenuDefinitionT * MenuDefs = NULL;
 static const MZ_DbaseFunctionsT * DbFuncs = NULL;
 
-static uint8_t MenuId = TOP_MENU;
+static uint8_t MenuId = ROOT_MENU;
 static uint8_t MenuItem = 0;
 static uint8_t RecordFormatIndex = 0;
 static uint8_t HeaderActionIndex = 0;
@@ -45,7 +45,7 @@ void MZ_init(const MZ_MenuDefinitionT * menuDefs,
              const MZ_DbaseFunctionsT * functions) {
     MenuDefs = menuDefs;
     DbFuncs = functions;
-    MenuId = TOP_MENU;
+    MenuId = ROOT_MENU;
     MenuItem = 0;
     MenuState = MZ_STATE_SCROLLING;
     RecordFormatIndex = 0;
@@ -78,11 +78,11 @@ static uint8_t getTableId(void) {
 
 static uint8_t getMaxMenuItems(void) {
     if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_FIXED) {
-        uint8_t numChildren = MenuDefs[MenuId].typeNav.numItems;
-        if (MenuDefs[MenuId].typeNav.lastChildIsHidden) {
+        uint8_t numChildren = MenuDefs[MenuId].typeFixed.numItems;
+        if (MenuDefs[MenuId].typeFixed.lastChildIsHidden) {
             numChildren--;
         }
-        assert(numChildren < 254);  // numChildren was too LOW
+        assert(numChildren > 0);
         return numChildren - 1;
     } else if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_DBASE) {
         const uint8_t tableId = getTableId();
@@ -236,8 +236,8 @@ static uint8_t getChildItemIdOfParent(void) {
             && MenuDefs[MenuId].typeDb.isChild) );
     MZ_MenuDefinitionT menuCurrent = MenuDefs[MenuId];
     MZ_MenuDefinitionT menuParent = MenuDefs[menuCurrent.parent];
-    for (uint8_t i = 0; i < menuParent.typeNav.numItems; i++) {
-        if (menuParent.typeNav.children[i] == MenuId) {
+    for (uint8_t i = 0; i < menuParent.typeFixed.numItems; i++) {
+        if (menuParent.typeFixed.children[i] == MenuId) {
             return i;
         }
     }
@@ -248,8 +248,8 @@ static uint8_t getChildItemIdOfParent(void) {
 static void goToParentTxtMenu(void) {
     MenuItem = getChildItemIdOfParent();
     MenuId = MenuDefs[MenuId].parent;
-    if (MenuDefs[MenuId].typeNav.lastChildIsHidden
-            && MenuItem == MenuDefs[MenuId].typeNav.numItems - 1) {
+    if (MenuDefs[MenuId].typeFixed.lastChildIsHidden
+            && MenuItem == MenuDefs[MenuId].typeFixed.numItems - 1) {
         MenuItem--; // go to penultimate item, as the last is hidden
     }
 }
@@ -277,7 +277,7 @@ static void goToParentMenu(void) {
 
 
 static void goToChildTxtMenu(void) {
-    MenuId = MenuDefs[MenuId].typeNav.children[MenuItem];
+    MenuId = MenuDefs[MenuId].typeFixed.children[MenuItem];
     MenuItem = 0;
 }
 
@@ -311,7 +311,7 @@ static bool goToChildMenu(void) {
         } else
             return false; // DB menu has no children
     } else if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_FIXED
-            && MenuDefs[MenuId].typeNav.children) {
+            && MenuDefs[MenuId].typeFixed.children) {
         goToChildTxtMenu();
     } else {
         return false; // navMenu has no children
@@ -322,7 +322,7 @@ static bool goToChildMenu(void) {
 
 static bool tryGoToHiddenMenu(void) {
     if (MenuDefs[MenuId].menuType == MZ_MENU_TYPE_FIXED
-            && MenuDefs[MenuId].typeNav.lastChildIsHidden
+            && MenuDefs[MenuId].typeFixed.lastChildIsHidden
             && MenuItem == getMaxMenuItems()) {
         MenuItem++; // go to the last (hidden) menu item
         goToChildTxtMenu();
@@ -361,7 +361,10 @@ static MZ_menuActionT getAction(MZ_navT nav) {
             }
         }
     }
-    return menuActions[MenuState][nav];
+    if (nav < MZ_NAV_COUNT) {
+        return menuActions[MenuState][nav];
+    }
+    return MZ_ACTION_NONE;
 }
 
 
@@ -392,7 +395,7 @@ MZ_menuActionT MZ_navigateMaze(MZ_navT nav) {
         case MZ_ACTION_SCROLL_1_MENU_ITEM_BACK_OR_GO_TO_HEADER :
             if (MenuItem > 0) {
                 success = decreaseMenuItemBy(1);
-            } else if (MenuId != TOP_MENU) {
+            } else if (MenuId != ROOT_MENU) {
                 MenuState = MZ_STATE_IN_HEADER;
             } else {
                 success = false;
@@ -494,22 +497,7 @@ void MZ_setNumListItems(const uint8_t numListItems) {
 }
 
 
-uint8_t MZ_getMenuId(void) {
-    return MenuId;
-}
-
-
-uint8_t MZ_getMenuItem(void) {
-    return MenuItem;
-}
-
-
-uint8_t MZ_getMenuState(void) {
-    return (uint8_t) MenuState;
-}
-
-
-uint8_t MZ_getCursorRow(void) {
+static uint8_t getCursorRow(void) {
     if (MenuState == MZ_STATE_IN_HEADER) {
         return CURSOR_ROW_HEADER;
     } else {
@@ -520,7 +508,7 @@ uint8_t MZ_getCursorRow(void) {
 
 /* NOTE: HeaderActionIndex is offset by 1, because 0 is the back/home position
  */
-uint8_t MZ_getCursorColumn(void) {
+static uint8_t getCursorColumn(void) {
     if (MenuState == MZ_STATE_DBASE_EDITING) {
         const uint8_t tableId = getTableId();
         return DbFuncs->getCursorColumnFromFormat(tableId, MenuItem, RecordFormatIndex);
@@ -541,7 +529,7 @@ MZ_navStateT MZ_getNavState(void) {
         .menuId = MenuId,
         .menuItem = MenuItem,
         .state = MenuState,
-        .cursorRow = MZ_getCursorRow(),
-        .cursorColumn = MZ_getCursorColumn(),
+        .cursorRow = getCursorRow(),
+        .cursorColumn = getCursorColumn(),
     };
 }
